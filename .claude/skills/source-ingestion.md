@@ -12,6 +12,7 @@ Ingest policy sources and attach structured metadata.
 
 1. Identify the source type and jurisdiction.
 2. Extract metadata:
+   - stable id
    - jurisdiction
    - domain (funds | tax | commercial)
    - source type
@@ -24,7 +25,11 @@ Ingest policy sources and attach structured metadata.
    - language
    - reliability level (S / A / B / C / D)
 3. Separate official sources (S, A, B) from professional commentary (C) and public posts (D).
-4. Store with metadata attached; do not strip it.
+4. Add curated reusable sources to the matching registry file:
+   - `sources/us.yaml`
+   - `sources/hk.yaml`
+   - `sources/sg.yaml`
+5. Store with metadata attached; do not strip it.
 
 ## Output
 

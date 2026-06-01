@@ -118,7 +118,7 @@ Agent 会输出三项结果：
 ```text
 1. Lead Policy Agent 识别法域、主体、交易和付款性质
 2. 判断主领域：资金合规 / 税务 / 民商法规
-3. 召唤 rag-retriever 检索官方来源
+3. 召唤 rag-retriever 先查 `sources/`，再检索官方来源
 4. 按需调用专项 subagents
 5. 调用 citation-verifier 校验依据
 6. 输出纯文本结论
@@ -138,7 +138,7 @@ Agent 会输出三项结果：
 2. Lead Policy Agent 提取交易事实
    └─ 主体、金额、币种、付款路径、合同类型、收入性质
 
-3. rag-retriever 检索来源
+3. rag-retriever 先查 `sources/` registry，再检索来源
    └─ 官方法规和监管指引优先
    └─ 专业文章和公众号只作为线索
 
@@ -194,7 +194,7 @@ Lead Policy Agent 识别问题、法域、主领域和辅助领域
   ↓
 Lead Policy Agent 形成任务包并决定使用哪些 subagents
   ↓
-rag-retriever 检索官方政策、法规和辅助资料
+rag-retriever 先查 `sources/` registry，再检索官方政策、法规和辅助资料
   ↓
 专项 subagents 分析
   ├── funds-compliance-analyst
@@ -267,8 +267,18 @@ C 和 D 级来源只能作为线索，不能作为最终法律依据。
   skills/
     liteparse/                  项目内置的第三方文档解析 skill
 
+docs/
+  rag-mcp-design.md             RAG / MCP 工具设计草案
+
+sources/
+  README.md                     来源 registry 字段和等级说明
+  us.yaml                       美国官方来源索引
+  hk.yaml                       香港官方来源索引
+  sg.yaml                       新加坡官方来源索引
+
 templates/
   report.md                     归档报告模板
+  retrieval-task.md             rag-retriever 任务包模板
 
 tools/
   render_report.py              生成 report.md 并尽量转换 report.pdf

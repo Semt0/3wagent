@@ -12,13 +12,18 @@ Retrieve policy sources with jurisdiction, domain and reliability metadata.
 
 1. Apply jurisdiction filters first (US, Hong Kong, Singapore).
 2. Apply domain filters second (funds, tax, commercial).
-3. Query with the user's issue profile.
-4. Score and filter by reliability:
+3. Read matching registry files under `sources/`:
+   - `sources/us.yaml`
+   - `sources/hk.yaml`
+   - `sources/sg.yaml`
+4. Use `templates/retrieval-task.md` to normalize incomplete retrieval requests.
+5. Query with the user's issue profile.
+6. Score and filter by reliability:
    - Prefer S and A sources.
    - Use B sources as supporting evidence.
    - Use C and D sources only as leads.
-5. Record for each result: title, authority, URL, jurisdiction, domain, reliability level, applicable point.
-6. If official support is missing, flag the conclusion as preliminary.
+7. Record for each result: source id, title, authority, URL, jurisdiction, domain, reliability level, applicable point.
+8. If official support is missing, flag the conclusion as preliminary.
 
 ## Output
 

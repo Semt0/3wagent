@@ -75,7 +75,7 @@ The project therefore does not maintain its own FastAPI / LangChain / LangGraph 
 | Issue routing | Identify jurisdictions, transaction type, payment character and primary domain |
 | Document parsing | Use the built-in `liteparse` skill for PDF / Word / scanned materials |
 | Subagent analysis | Split funds compliance, tax and commercial law into specialist agents |
-| Policy retrieval | Filter sources by US / HK / SG and funds / tax / commercial domains |
+| Policy retrieval | Start from `sources/`, then filter by US / HK / SG and funds / tax / commercial domains |
 | Citation verification | Check whether conclusions match the cited jurisdiction and source |
 | Report archive | Generate both `report.md` and `report.pdf` under `reports/` |
 
@@ -88,7 +88,7 @@ For a direct policy question:
 ```text
 1. The Lead Policy Agent identifies jurisdiction, parties, transaction and payment character
 2. It decides the primary domain: funds / tax / commercial
-3. It delegates source retrieval to rag-retriever
+3. It delegates source retrieval to rag-retriever, starting from `sources/`
 4. It calls the relevant specialist subagents
 5. It runs citation-verifier
 6. It writes the final answer
@@ -106,7 +106,7 @@ For an attached document:
 2. The Lead Policy Agent extracts transaction facts
    └─ parties, amount, currency, payment path, contract type and income type
 
-3. rag-retriever gathers source packs
+3. rag-retriever checks the `sources/` registry and gathers source packs
    └─ official laws and regulator guidance first
    └─ professional commentary and public account posts as leads only
 
@@ -156,7 +156,7 @@ If files are attached, document-parser uses liteparse
   ↓
 Lead Policy Agent creates task packages and chooses subagents
   ↓
-rag-retriever gathers official and secondary sources
+rag-retriever checks `sources/`, then gathers official and secondary sources
   ↓
 Specialist subagents analyze
   ├── funds-compliance-analyst
@@ -217,8 +217,18 @@ C and D sources are leads only. They must not be treated as final legal authorit
   skills/
     liteparse/                  Built-in third-party document parsing skill
 
+docs/
+  rag-mcp-design.md             RAG / MCP tool design draft
+
+sources/
+  README.md                     Source registry schema and reliability notes
+  us.yaml                       United States official source index
+  hk.yaml                       Hong Kong official source index
+  sg.yaml                       Singapore official source index
+
 templates/
   report.md                     Archived report template
+  retrieval-task.md             rag-retriever task package template
 
 tools/
   render_report.py              Generate report.md and try to convert report.pdf

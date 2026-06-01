@@ -1,0 +1,74 @@
+jurisdiction: US
+updated: 2026-06-01
+sources:
+  - id: us-ofac-sanctions-programs
+    title: Sanctions Programs and Country Information
+    authority: U.S. Department of the Treasury, Office of Foreign Assets Control
+    url: https://ofac.treasury.gov/sanctions-programs-and-country-information
+    domains: [funds]
+    reliability: A
+    source_type: regulator guidance
+    notes: Official OFAC sanctions program index. Use for sanctions scope and program-specific leads.
+
+  - id: us-ofac-sdn-search
+    title: Sanctions List Search
+    authority: U.S. Department of the Treasury, Office of Foreign Assets Control
+    url: https://sanctionssearch.ofac.treas.gov/
+    domains: [funds]
+    reliability: A
+    source_type: official search
+    notes: Official OFAC sanctions list search. Use for entity and person screening references.
+
+  - id: us-fincen-bsa
+    title: Bank Secrecy Act
+    authority: Financial Crimes Enforcement Network
+    url: https://www.fincen.gov/resources/statutes-regulations/bank-secrecy-act
+    domains: [funds]
+    reliability: A
+    source_type: regulator guidance
+    notes: Official FinCEN overview of BSA obligations and related AML regulation links.
+
+  - id: us-irs-tax-treaties
+    title: United States Income Tax Treaties - A to Z
+    authority: Internal Revenue Service
+    url: https://www.irs.gov/businesses/international-businesses/united-states-income-tax-treaties-a-to-z
+    domains: [tax]
+    reliability: A
+    source_type: tax authority guidance
+    notes: Official treaty index. Use when payment characterization may depend on treaty relief.
+
+  - id: us-irs-publication-515
+    title: Publication 515, Withholding of Tax on Nonresident Aliens and Foreign Entities
+    authority: Internal Revenue Service
+    url: https://www.irs.gov/forms-pubs/about-publication-515
+    domains: [tax]
+    reliability: A
+    source_type: tax authority guidance
+    notes: Official IRS publication for NRA and foreign entity withholding issues.
+
+  - id: us-code-title-26
+    title: Internal Revenue Code, Title 26
+    authority: Office of the Law Revision Counsel
+    url: https://uscode.house.gov/browse/prelim@title26
+    domains: [tax]
+    reliability: S
+    source_type: official legal database
+    notes: Official U.S. Code source for federal tax statutes.
+
+  - id: us-code-title-15
+    title: United States Code, Title 15 - Commerce and Trade
+    authority: Office of the Law Revision Counsel
+    url: https://uscode.house.gov/browse/prelim@title15
+    domains: [commercial]
+    reliability: S
+    source_type: official legal database
+    notes: Federal commercial law starting point. State corporate law still requires state-specific sources.
+
+  - id: us-delaware-corporations
+    title: Delaware Division of Corporations
+    authority: Delaware Department of State
+    url: https://corp.delaware.gov/
+    domains: [commercial]
+    reliability: A
+    source_type: official registry guidance
+    notes: Useful for Delaware entity formation and filing practice; verify statutes separately when needed.

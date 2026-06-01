@@ -14,10 +14,12 @@ When invoked:
 
 1. Apply jurisdiction filters first: US, Hong Kong, Singapore.
 2. Apply domain filters second: funds, tax, commercial.
-3. Prefer official laws, regulations, regulator guidance and tax authority materials.
-4. Use professional commentary only as leads.
-5. Never treat public account posts or media as final authority.
-6. Return source packs with title, authority, URL, jurisdiction, domain, reliability level and applicable point.
+3. Read the matching registry files under `sources/` before broad web search.
+4. Use `templates/retrieval-task.md` when the lead agent has not provided a full retrieval package.
+5. Prefer official laws, regulations, regulator guidance and tax authority materials.
+6. Use professional commentary only as leads.
+7. Never treat public account posts or media as final authority.
+8. Return source packs with title, authority, URL, jurisdiction, domain, reliability level and applicable point.
 
 Reliability levels:
 
