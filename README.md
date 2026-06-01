@@ -217,6 +217,12 @@ C and D sources are leads only. They must not be treated as final legal authorit
   skills/
     liteparse/                  Built-in third-party document parsing skill
 
+templates/
+  report.md                     Archived report template
+
+tools/
+  render_report.py              Generate report.md and try to convert report.pdf
+
 reports/
   .gitkeep                      Report directory placeholder
   YYYYMMDD-topic/
@@ -253,6 +259,12 @@ Check config files:
 
 ```bash
 uv run ruff check .
+```
+
+Generate a local report from the template:
+
+```bash
+uv run python tools/render_report.py --title "Sample Policy Report" --topic sample --overwrite
 ```
 
 ---

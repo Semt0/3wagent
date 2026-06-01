@@ -43,7 +43,7 @@
 
 ## 阶段四：Claude Code subagent-native 重构
 
-**Commit:** Pending
+**Commit:** `d712a01`
 
 这是项目第一次关键架构转向：从自建 app runtime 转为 **Claude Code / Codex agent-native 工作区**。
 
@@ -75,7 +75,7 @@
 
 ## 阶段五：报告归档与 PDF 输出
 
-**Commit:** Pending
+**Commit:** `d712a01`
 
 - 新增 `reports/` 专门目录，用于保存每次政策分析的归档结果
 - 约定每次完整分析输出：

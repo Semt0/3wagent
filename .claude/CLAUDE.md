@@ -57,6 +57,8 @@ reports/YYYYMMDD-topic/
 
 Convert `report.md` to `report.pdf` after writing it. If PDF conversion tooling is unavailable, keep `report.md`, state that PDF conversion was not completed, and include the reason in the final answer.
 
+Use `tools/render_report.py` as the default local helper for creating report folders from `templates/report.md` and converting Markdown to PDF.
+
 The final answer should include the generated report paths.
 
 ## Required Output Sections

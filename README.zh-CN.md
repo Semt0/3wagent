@@ -267,6 +267,12 @@ C 和 D 级来源只能作为线索，不能作为最终法律依据。
   skills/
     liteparse/                  项目内置的第三方文档解析 skill
 
+templates/
+  report.md                     归档报告模板
+
+tools/
+  render_report.py              生成 report.md 并尽量转换 report.pdf
+
 reports/
   .gitkeep                      报告生成目录占位
   YYYYMMDD-topic/
@@ -303,6 +309,12 @@ npx skills add run-llama/llamaparse-agent-skills --skill liteparse
 
 ```bash
 uv run ruff check .
+```
+
+生成一份本地报告模板：
+
+```bash
+uv run python tools/render_report.py --title "示例政策报告" --topic sample --overwrite
 ```
 
 ---
