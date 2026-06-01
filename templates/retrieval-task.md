@@ -29,10 +29,13 @@ Allowed domains:
 - `tax`
 - `commercial`
 
+When Mainland China is involved in a funds issue, include foreign exchange administration in the funds domain. Check SAFE rules for current-account payments, capital-account items, settlement and sale of foreign exchange, foreign debt, outbound investment, cross-border guarantees and registration or filing requirements.
+
 ## Registry First Pass
 
 Read the matching files under `sources/` before broad web search:
 
+- `sources/cn.yaml`
 - `sources/us.yaml`
 - `sources/hk.yaml`
 - `sources/sg.yaml`

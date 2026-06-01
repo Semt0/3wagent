@@ -4,6 +4,8 @@ This folder contains curated starting points for 3wagent retrieval. The registry
 
 ## Entry Schema
 
+Each registry file should include a top-level `jurisdiction` such as `CN`, `US`, `HK`, or `SG`.
+
 Each source entry should include:
 
 - `id`: Stable lowercase identifier.
@@ -14,6 +16,8 @@ Each source entry should include:
 - `reliability`: `S`, `A`, `B`, `C`, or `D`.
 - `source_type`: Law, regulation, regulator guidance, tax authority guidance, official FAQ, professional commentary, or public commentary.
 - `notes`: Retrieval guidance and limits.
+
+For Mainland China, foreign exchange administration, SAFE rules, settlement and sale of foreign exchange, capital-account filings and cross-border payment controls belong to the `funds` domain.
 
 ## Reliability Rules
 

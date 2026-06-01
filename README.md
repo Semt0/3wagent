@@ -56,6 +56,8 @@ The agent should produce:
 
 3wagent is not trying to become a heavy legal-tech application first. It is a personal research workspace for cross-border policy analysis.
 
+The current jurisdiction scope covers Mainland China, the United States, Hong Kong and Singapore.
+
 At this stage, the valuable part is the decision boundary:
 
 - when funds flow, banking compliance, AML and sanctions should lead
@@ -75,7 +77,7 @@ The project therefore does not maintain its own FastAPI / LangChain / LangGraph 
 | Issue routing | Identify jurisdictions, transaction type, payment character and primary domain |
 | Document parsing | Use the built-in `liteparse` skill for PDF / Word / scanned materials |
 | Subagent analysis | Split funds compliance, tax and commercial law into specialist agents |
-| Policy retrieval | Start from `sources/`, then filter by US / HK / SG and funds / tax / commercial domains |
+| Policy retrieval | Start from `sources/`, then filter by CN / US / HK / SG and funds / tax / commercial domains |
 | Citation verification | Check whether conclusions match the cited jurisdiction and source |
 | Report archive | Generate both `report.md` and `report.pdf` under `reports/` |
 
@@ -222,6 +224,7 @@ docs/
 
 sources/
   README.md                     Source registry schema and reliability notes
+  cn.yaml                       Mainland China official source index
   us.yaml                       United States official source index
   hk.yaml                       Hong Kong official source index
   sg.yaml                       Singapore official source index

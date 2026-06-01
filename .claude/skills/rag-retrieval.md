@@ -10,9 +10,10 @@ Retrieve policy sources with jurisdiction, domain and reliability metadata.
 
 ## Steps
 
-1. Apply jurisdiction filters first (US, Hong Kong, Singapore).
+1. Apply jurisdiction filters first (US, Mainland China, Hong Kong, Singapore).
 2. Apply domain filters second (funds, tax, commercial).
 3. Read matching registry files under `sources/`:
+   - `sources/cn.yaml`
    - `sources/us.yaml`
    - `sources/hk.yaml`
    - `sources/sg.yaml`

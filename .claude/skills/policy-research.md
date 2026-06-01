@@ -1,6 +1,6 @@
 # policy-research
 
-Answer cross-border policy questions for the United States, Hong Kong or Singapore.
+Answer cross-border policy questions for the United States, Mainland China, Hong Kong or Singapore.
 
 ## When to use
 
@@ -25,6 +25,7 @@ Answer cross-border policy questions for the United States, Hong Kong or Singapo
 
 ## Domain notes
 
-- Funds issues mean AML, KYC, sanctions, source-of-funds and bank practice. Do not assume China-style FX approval.
+- Funds issues mean AML, KYC, sanctions, source-of-funds, China SAFE / foreign exchange administration when Mainland China is involved, and bank practice.
+- Do not assume China-style FX approval applies outside Mainland China. When Mainland China is involved, explicitly check SAFE, current-account, capital-account, settlement, sale and payment rules.
 - Tax issues depend on payment characterization and tax residency.
 - Commercial law issues include company formation, contracts, share transfers, registration and licenses.

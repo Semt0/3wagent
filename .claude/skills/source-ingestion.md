@@ -26,6 +26,7 @@ Ingest policy sources and attach structured metadata.
    - reliability level (S / A / B / C / D)
 3. Separate official sources (S, A, B) from professional commentary (C) and public posts (D).
 4. Add curated reusable sources to the matching registry file:
+   - `sources/cn.yaml`
    - `sources/us.yaml`
    - `sources/hk.yaml`
    - `sources/sg.yaml`

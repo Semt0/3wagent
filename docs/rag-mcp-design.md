@@ -11,6 +11,7 @@ This document defines the next engineering layer for 3wagent without requiring a
 
 ## Current Assets
 
+- `sources/cn.yaml`
 - `sources/us.yaml`
 - `sources/hk.yaml`
 - `sources/sg.yaml`
@@ -22,17 +23,19 @@ This document defines the next engineering layer for 3wagent without requiring a
 
 ## Source Entry Contract
 
-Every source entry should preserve:
+Every source registry should preserve the jurisdiction at the top level and source metadata on each entry:
 
 ```yaml
-id: stable-source-id
-title: Source title
-authority: Issuing authority or official database
-url: Canonical URL
-domains: [funds, tax, commercial]
-reliability: S
-source_type: official legal database
-notes: Retrieval notes and known limits
+jurisdiction: CN
+sources:
+  - id: stable-source-id
+    title: Source title
+    authority: Issuing authority or official database
+    url: Canonical URL
+    domains: [funds, tax, commercial]
+    reliability: S
+    source_type: official legal database
+    notes: Retrieval notes and known limits
 ```
 
 The retrieval layer should never strip metadata. Final analysis needs the metadata to check whether a conclusion is supported by the correct jurisdiction, domain and reliability level.
@@ -55,11 +58,13 @@ Input:
 
 ```json
 {
-  "jurisdictions": ["HK", "SG"],
-  "domains": ["tax", "funds"],
-  "query": "service fee withholding tax and cross-border payment"
+  "jurisdictions": ["CN", "HK"],
+  "domains": ["funds", "tax"],
+  "query": "Mainland China foreign exchange settlement cross-border service fee payment"
 }
 ```
+
+For Mainland China funds questions, use `CN` and include foreign exchange terms such as SAFE, current account, capital account, settlement and sale of foreign exchange, foreign debt, outbound investment or cross-border guarantee.
 
 Output:
 
@@ -67,14 +72,14 @@ Output:
 {
   "sources": [
     {
-      "id": "sg-iras-withholding-tax",
-      "title": "Withholding Tax",
-      "authority": "Inland Revenue Authority of Singapore",
-      "url": "https://www.iras.gov.sg/taxes/withholding-tax",
-      "jurisdiction": "SG",
-      "domains": ["tax"],
+      "id": "cn-safe-policy-regulations",
+      "title": "Policy and Regulation Index",
+      "authority": "State Administration of Foreign Exchange",
+      "url": "https://www.safe.gov.cn/safe/zcfg/index.html",
+      "jurisdiction": "CN",
+      "domains": ["funds"],
       "reliability": "A",
-      "applicable_point": "Singapore withholding tax entry point"
+      "applicable_point": "SAFE official policy and regulation index for foreign exchange administration"
     }
   ]
 }

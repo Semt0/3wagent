@@ -76,11 +76,11 @@ Agent 会输出三项结果：
 
 ## Introduction
 
-3wagent 面向美国、香港、新加坡三地的跨境政策研究，支持：
+3wagent 面向中国内地、美国、香港、新加坡的跨境政策研究，支持：
 
 - 直接输入政策问题
 - 上传 PDF / Word 等材料后分析
-- 从资金合规、税务、民商法规三个方向拆解问题
+- 从资金合规（含中国内地外汇管理）、税务、民商法规三个方向拆解问题
 - 检索官方政策、法规和监管指引
 - 区分官方依据、专业解读和公众号线索
 - 输出纯文本分析、Markdown 归档报告和 PDF 报告
@@ -103,7 +103,7 @@ Agent 会输出三项结果：
 | 问题识别 | 自动识别法域、交易类型、付款性质和主分析领域 |
 | 文档解析 | 内置 `liteparse` skill，优先处理 PDF / Word / 扫描件 |
 | Subagent 分析 | 资金合规、税务、民商法规分别由专项 subagent 处理 |
-| 政策检索 | 按 US / HK / SG 和 funds / tax / commercial 过滤来源 |
+| 政策检索 | 先查 `sources/`，再按 CN / US / HK / SG 和 funds / tax / commercial 过滤来源 |
 | 引用校验 | 检查结论是否由正确法域和正确来源支持 |
 | 报告归档 | 同步生成 `report.md` 和 `report.pdf` |
 
@@ -272,6 +272,7 @@ docs/
 
 sources/
   README.md                     来源 registry 字段和等级说明
+  cn.yaml                       中国内地官方来源索引
   us.yaml                       美国官方来源索引
   hk.yaml                       香港官方来源索引
   sg.yaml                       新加坡官方来源索引
