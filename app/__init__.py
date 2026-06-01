@@ -1,2 +1,0 @@
-"""3wagent application package."""
-

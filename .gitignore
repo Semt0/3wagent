@@ -1,55 +1,19 @@
-# Python
+# Python / uv
+.venv/
 __pycache__/
 *.py[cod]
-*$py.class
-.python-version
-
-# Virtual environments
-.venv/
-venv/
-env/
-ENV/
-
-# uv
-# Keep uv.lock committed for reproducible application installs.
-
-# Test, lint and type-check caches
-.pytest_cache/
 .ruff_cache/
-.mypy_cache/
-.pyre/
-.coverage
-htmlcov/
 
-# Environment and secrets
+# Local secrets and agent settings
 .env
 .env.*
-!.env.example
+.claude/settings.local.json
 
-# FastAPI / local runtime
-*.log
-logs/
-tmp/
-temp/
+# Generated reports
+reports/*
+!reports/.gitkeep
 
-# Local databases and generated storage
-*.sqlite
-*.sqlite3
-*.db
-data/
-storage/
-uploads/
-
-# Build artifacts
-build/
-dist/
-*.egg-info/
-
-# Editor and OS files
+# Editor / OS
 .DS_Store
 .idea/
 .vscode/
-
-# Docker local overrides
-docker-compose.override.yml
-

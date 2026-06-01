@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "liteparse": {
+      "source": "run-llama/llamaparse-agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/liteparse/SKILL.md",
+      "computedHash": "93b85e81ea3e469a0628e9a31a14c510f11a4531f72f3647783ab5e5cac71858"
+    }
+  }
+}

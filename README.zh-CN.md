@@ -1,271 +1,242 @@
-# 3wagent
+<h1 align="center">3wagent</h1>
 
-语言：[English](README.md) | 简体中文
+<p align="center">
+  <strong>个人跨境政策研究 Agent Workspace</strong><br>
+  从问题识别、政策检索到法规索引和报告归档，全程交给 Claude Code subagents 执行
+</p>
 
-3wagent 是一个个人使用的跨境政策研究 Agent。它接收用户问题或 PDF/Word 文档，自动判断资金合规、税务、公司与民商法等分析主线，检索政策依据，并输出带引用和可靠性说明的纯文本报告。
+<p align="center">
+  <a href="README.md">English</a>
+  ·
+  <a href="CHANGELOG.md">CHANGELOG</a>
+</p>
 
-第一阶段覆盖：
+---
 
-- 美国
-- 香港
-- 新加坡
+## 快速开始
 
-系统优先使用官方法律、法规和监管机构指引。专业文章和公众号内容只作为辅助线索。
+### 第一步：clone 仓库到本地
 
-## 核心架构
+本项目不需要启动后端服务，也不需要运行单独的 agent runtime。先把仓库 clone 到本地：
 
-项目前期要保持轻，后期沿稳定边界自然扩展：
-
-```text
-Streamlit UI
-  -> FastAPI API
-  -> 文档解析
-  -> 问题路由
-  -> 检索接口
-  -> LangChain 专家 Chains
-       - 资金 / AML / 制裁
-       - 税务
-       - 公司与民商法
-  -> 证据校验
-  -> 纯文本报告生成
+```bash
+git clone git@github.com:Semt0/3wagent.git
+cd 3wagent
 ```
 
-核心取舍：
+如果使用 Claude Code，在仓库目录中打开即可，`.claude/CLAUDE.md` 会作为项目规则自动读取。
 
-- LangChain 是 LLM、prompt 和 chain 的核心层。
-- Python workflow 负责 MVP 阶段的业务编排。
-- 检索先做成可替换接口，后期自然升级为 RAG。
-- LangGraph 等流程分支和状态管理复杂后再引入。
-- 前端 MVP 先用 Streamlit，后期可以切 Next.js，不影响后端分析接口。
-
-## 当前目录
+如果使用 Codex，需要显式提醒它读取规则：
 
 ```text
-app/
-  main.py                       FastAPI 入口
-
-  core/
-    config.py                   运行配置
-    schemas.py                  共享 Pydantic 模型
-
-  intake/
-    document_intake.py          上传文档文本抽取
-    pdf_parser.py               PDF 解析
-    word_parser.py              Word 解析
-
-  router/
-    rules.py                    路由关键词和规则
-    issue_router.py             问题分类
-
-  retrieval/
-    retriever.py                当前 mock，后期升级 RAG
-
-  llm/
-    client.py                   LangChain 模型 provider 工厂
-    chains.py                   LangChain chain 辅助
-
-  tools/
-    skills/
-      registry.py               运行时 prompt 注册表
-      loader.py                 prompt 模板加载器
-      templates/                LangChain system prompts
-    mcp/                        后续可选 MCP 客户端适配层
-
-  agents/
-    funds_agent.py
-    tax_agent.py
-    commercial_agent.py
-    evidence_verifier.py
-    answer_writer.py
-    source_context.py
-
-  graph/
-    policy_graph.py             MVP Python workflow；后期 LangGraph 入口
-
-scripts/
-  ingest_documents.py
-  crawl_sources.py
-
-tests/
+请阅读这个仓库的 .claude/CLAUDE.md，并按 3wagent workflow 分析我的问题。
 ```
 
-## 演进路线
-
-架构按阶段扩展，不推翻重来：
+### 第二步：直接输入问题或上传文件
 
 ```text
-Phase 1: MVP
-FastAPI + LangChain + Python workflow + mock retriever + Streamlit
-
-Phase 2: 可用 RAG
-PostgreSQL + pgvector + 全文检索 + source metadata + hybrid retrieval
-
-Phase 3: 稳定工作流
-用 LangGraph 拆 intake、router、retrieval、专家分析、证据校验、报告生成节点
-
-Phase 4: 产品化 UI
-Next.js / React 前端、流式对话、文件管理、政策来源看板
+香港公司向新加坡公司支付服务费，需要关注哪些税务和银行合规问题？
 ```
 
-成熟版本一定需要 RAG，但应通过 `retrieval/` 自然接入，而不是一开始重写主流程。后期 RAG 需要支持：
+也可以上传 PDF / Word 后提问：
 
-- 法域过滤：US / HK / SG
-- 领域过滤：funds / tax / commercial
-- 来源等级：S / A / B / C / D
-- pgvector 向量检索
-- PostgreSQL 全文检索
-- 引用 metadata 和检索日期
-- 最终输出前的证据校验
+```text
+请分析这份协议里涉及的跨境付款、税务和公司法风险。
+```
+
+### 第三步：等待 Agent 输出报告
+
+Agent 会输出三项结果：
+
+```text
+1. 对话中的纯文本政策分析
+2. reports/YYYYMMDD-topic/report.md
+3. reports/YYYYMMDD-topic/report.pdf
+```
+
+如果本地暂时缺少 Markdown 转 PDF 工具，会先保留 `report.md`，并说明 PDF 未生成的原因。
+
+---
+
+## Motivation：为什么不是再造一个应用
+
+3wagent 的目标不是先做一个庞大的法律科技产品，而是搭一个给自己使用的跨境政策研究工作区。
+
+对于这个阶段，更重要的是把政策研究的判断边界沉淀下来：
+
+- 什么时候优先看资金流动、银行合规、AML 和制裁
+- 什么时候税务独立分析，不强行牵扯外汇
+- 什么时候补充公司法、合同、牌照和民商法规
+- 哪些资料可以作为依据，哪些资料只能作为线索
+- 最终如何稳定输出法规索引和风险提示
+
+所以项目暂时不自建 FastAPI / LangChain / LangGraph runtime，而是直接使用 Claude Code 的 rules、skills 和 subagents。通用 coding agent 已经具备工具调用、文件读写、检索和任务拆分能力；这个仓库只负责提供稳定的领域规则和执行边界。
+
+---
+
+## Introduction
+
+3wagent 面向美国、香港、新加坡三地的跨境政策研究，支持：
+
+- 直接输入政策问题
+- 上传 PDF / Word 等材料后分析
+- 从资金合规、税务、民商法规三个方向拆解问题
+- 检索官方政策、法规和监管指引
+- 区分官方依据、专业解读和公众号线索
+- 输出纯文本分析、Markdown 归档报告和 PDF 报告
+
+核心原则：
+
+```text
+官方法律 / 法规 / 监管指引优先
+专业机构文章只作为辅助解释
+公众号和媒体内容只作为线索
+没有来源的结论必须降级
+```
+
+---
+
+## Features
+
+| 功能 | 说明 |
+|------|------|
+| 问题识别 | 自动识别法域、交易类型、付款性质和主分析领域 |
+| 文档解析 | 内置 `liteparse` skill，优先处理 PDF / Word / 扫描件 |
+| Subagent 分析 | 资金合规、税务、民商法规分别由专项 subagent 处理 |
+| 政策检索 | 按 US / HK / SG 和 funds / tax / commercial 过滤来源 |
+| 引用校验 | 检查结论是否由正确法域和正确来源支持 |
+| 报告归档 | 同步生成 `report.md` 和 `report.pdf` |
+
+---
+
+## Claude Code 会做什么
+
+### 模式一：直接政策问题
+
+当你只输入一个问题时：
+
+```text
+1. Lead Policy Agent 识别法域、主体、交易和付款性质
+2. 判断主领域：资金合规 / 税务 / 民商法规
+3. 召唤 rag-retriever 检索官方来源
+4. 按需调用专项 subagents
+5. 调用 citation-verifier 校验依据
+6. 输出纯文本结论
+7. 写入 reports/YYYYMMDD-topic/report.md
+8. 转换为 reports/YYYYMMDD-topic/report.pdf
+```
+
+### 模式二：文件 + 问题
+
+当你上传 PDF / Word 时：
+
+```text
+1. document-parser 解析文件
+   └─ 优先使用 liteparse
+   └─ 保留页码、标题、表格、脚注和 OCR 不确定性
+
+2. Lead Policy Agent 提取交易事实
+   └─ 主体、金额、币种、付款路径、合同类型、收入性质
+
+3. rag-retriever 检索来源
+   └─ 官方法规和监管指引优先
+   └─ 专业文章和公众号只作为线索
+
+4. 专项 subagents 分析
+   └─ funds-compliance-analyst
+   └─ tax-policy-analyst
+   └─ commercial-law-analyst
+
+5. citation-verifier 校验
+   └─ 检查法域、来源等级和结论支撑关系
+
+6. 生成最终答复和报告文件
+```
+
+---
+
+## Agent Team 结构
+
+```text
+Lead Policy Agent（主会话）
+│
+├── document-parser
+│   └── PDF / Word / 图片 / 表格解析，不做法律分析
+│
+├── rag-retriever
+│   └── 检索官方政策、法规、监管指引和辅助资料
+│
+├── funds-compliance-analyst
+│   └── 资金流动、银行 KYC、AML/CFT、OFAC、制裁、付款牌照
+│
+├── tax-policy-analyst
+│   └── 预提税、利得税、企业所得税、GST/VAT、税收协定
+│
+├── commercial-law-analyst
+│   └── 公司设立、股权转让、合同、董事责任、牌照和登记
+│
+└── citation-verifier
+    └── 校验引用、来源等级、法域匹配和结论可靠性
+```
+
+主会话负责路由、任务拆分、冲突处理和最终写作。subagent 只处理自包含专项任务，不承担顶层编排。
+
+---
+
+## Workflow
+
+```text
+用户输入问题或上传 PDF / Word
+  ↓
+Lead Policy Agent 识别问题、法域、主领域和辅助领域
+  ↓
+如有文件，调用 document-parser，并优先使用 liteparse 解析
+  ↓
+Lead Policy Agent 形成任务包并决定使用哪些 subagents
+  ↓
+rag-retriever 检索官方政策、法规和辅助资料
+  ↓
+专项 subagents 分析
+  ├── funds-compliance-analyst
+  ├── tax-policy-analyst
+  └── commercial-law-analyst
+  ↓
+citation-verifier 校验引用、法域、来源等级和结论可靠性
+  ↓
+Lead Policy Agent 生成最终纯文本答复
+  ↓
+同时在 reports/YYYYMMDD-topic/ 生成 report.md
+  ↓
+将 report.md 转换为 report.pdf
+```
+
+---
 
 ## 路由规则
 
-涉及跨境付款、汇款、银行 KYC、AML/CFT、资金来源、OFAC、制裁、账户、投资款或分红汇出时，优先走资金 / AML / 制裁分析。
+| 触发条件 | 主分析方向 |
+|----------|------------|
+| 跨境付款、汇款、银行 KYC、资金来源、OFAC、制裁、账户、投资款、分红汇出 | 资金合规 |
+| 预提税、利得税、企业所得税、GST/VAT、股息、利息、特许权使用费、服务费、资本利得、税收协定 | 税务 |
+| 公司设立、董事、股东、股权转让、合同、商业登记、牌照、投资准入 | 民商法规 |
 
-涉及预提税、利得税、企业所得税、GST/VAT、股息、利息、特许权使用费、服务费、资本利得、税收居民、常设机构或税收协定时，优先走税务分析。
+如果税务和资金问题同时出现，且核心是付款性质判断，则税务作为主分析，资金合规作为辅助分析。
 
-涉及公司设立、董事、股东、股权转让、合同、商业登记、牌照或投资准入时，优先走公司与民商法分析。
+---
 
-如果税务和资金问题同时出现，且核心是付款性质判断，则税务可以作为主分析，资金合规作为辅助分析。
+## 来源等级
 
-## 来源可靠性
+| 等级 | 来源类型 |
+|------|----------|
+| S | 法律原文、法规、条例和官方法律数据库 |
+| A | 监管机构指引、税局指引和官方 FAQ |
+| B | 官方通函、公告、判例和正式通知 |
+| C | 律所、会计师事务所、银行或专业机构简报 |
+| D | 公众号、媒体文章和个人评论 |
 
-```text
-S：法律原文、法规、条例和官方法律数据库
-A：监管机构指引、税局指引和官方 FAQ
-B：官方通函、公告、判例和正式通知
-C：律所、会计师事务所、银行或专业机构简报
-D：公众号、媒体文章和个人评论
-```
+C 和 D 级来源只能作为线索，不能作为最终法律依据。
 
-最终结论应区分：
-
-- 已由官方来源支持
-- 高度可能，但需要人工复核
-- 仅为二级资料线索
-- 未找到可靠依据
-
-## 技术栈
-
-MVP：
-
-```text
-Python 3.11+
-uv + pyproject.toml + uv.lock
-FastAPI + Uvicorn
-Pydantic v2
-LangChain + 可配置 LLM provider
-PyMuPDF + python-docx
-Streamlit
-pytest + ruff
-Docker + Docker Compose
-```
-
-后续：
-
-```text
-PostgreSQL + pgvector
-PostgreSQL full-text search
-Alembic
-Scrapy / Playwright
-BeautifulSoup / trafilatura
-Tesseract / PaddleOCR
-LangGraph
-Celery + Redis
-Next.js / React + Tailwind CSS + shadcn/ui
-```
-
-MCP 不作为 MVP 核心能力。后续如果确实出现外部工具边界，再通过 `app/tools/mcp/` 接入。
-
-## 本地开发
-
-安装依赖：
-
-```bash
-uv venv
-source .venv/bin/activate
-uv sync --extra dev
-```
-
-创建本地环境变量：
-
-```bash
-cp .env.example .env
-```
-
-需要调用远程模型时设置 `LLM_API_KEY`。如果没有配置模型 provider，MVP 会使用确定性的 fallback 分析，方便本地先跑通路由和 API smoke test。
-
-默认 provider：
-
-```text
-LLM_PROVIDER=openai
-LLM_MODEL=gpt5.5
-LLM_API_KEY=...
-```
-
-OpenAI-compatible API 可以继续使用 LangChain 的 OpenAI adapter，并配置自定义 base URL：
-
-```text
-LLM_PROVIDER=openai_compatible
-LLM_MODEL=your-model
-LLM_API_KEY=...
-LLM_BASE_URL=https://your-provider.example.com/v1
-```
-
-其他 provider 可以在 `app/llm/client.py` 里按同样的 provider factory 模式继续扩展。
-
-运行 API：
-
-```bash
-uv run uvicorn app.main:app --reload
-```
-
-本地接口：
-
-```text
-GET  http://127.0.0.1:8000/health
-POST http://127.0.0.1:8000/analyze
-GET  http://127.0.0.1:8000/docs
-```
-
-示例：
-
-```bash
-curl -X POST http://127.0.0.1:8000/analyze \
-  -F "question=香港公司向新加坡公司支付服务费，需要关注哪些税务和银行合规问题？"
-```
-
-运行测试：
-
-```bash
-uv run pytest
-```
-
-## Streamlit Demo
-
-计划中的 MVP 流程：
-
-```text
-终端 1：
-  uv run uvicorn app.main:app --reload
-  -> FastAPI 后端运行在 http://127.0.0.1:8000
-
-终端 2：
-  uv run streamlit run frontend/streamlit_app.py
-  -> Streamlit 页面运行在 http://127.0.0.1:8501
-```
-
-用户流程：
-
-```text
-1. 输入政策问题
-2. 按需上传 PDF 或 Word
-3. 可选选择 US / 香港 / 新加坡
-4. 点击 Analyze
-5. Streamlit 调用 POST /analyze
-6. 后端返回纯文本政策报告
-```
-
-`frontend/streamlit_app.py` 还未实现。
+---
 
 ## 输出结构
 
@@ -279,4 +250,70 @@ uv run pytest
 【实务文件清单】
 【风险提示】
 【结论可靠性】
+【报告文件】
 ```
+
+---
+
+## 项目结构
+
+```text
+.claude/
+  CLAUDE.md                     Claude Code 项目级规则和 lead agent 约束
+  agents/                       项目级 subagents
+  skills/                       政策研究、检索、引用校验和来源采集规则
+
+.agents/
+  skills/
+    liteparse/                  项目内置的第三方文档解析 skill
+
+reports/
+  .gitkeep                      报告生成目录占位
+  YYYYMMDD-topic/
+    report.md                   详细 Markdown 报告，本地产物
+    report.pdf                  Markdown 转换后的 PDF，本地产物
+
+CHANGELOG.md                    项目演进记录
+README.md
+README.zh-CN.md
+pyproject.toml
+uv.lock
+skills-lock.json
+```
+
+---
+
+## 本地设置
+
+安装最小工具环境：
+
+```bash
+uv venv
+source .venv/bin/activate
+uv sync --extra dev
+```
+
+`liteparse` 已随仓库提供。只有需要刷新或重新安装该 skill 时，才运行：
+
+```bash
+npx skills add run-llama/llamaparse-agent-skills --skill liteparse
+```
+
+检查配置文件：
+
+```bash
+uv run ruff check .
+```
+
+---
+
+## Discussion
+
+当前版本优先验证 agent-native workflow，不急于产品化。后续只有在以下需求稳定出现时，才考虑加入更重的工程层：
+
+- 需要长期维护本地 RAG 索引
+- 需要多人共享同一套政策资料库
+- 需要 Web UI、权限、文件管理或审计日志
+- 需要把高频流程封装为 MCP 工具或后台服务
+
+在此之前，3wagent 的核心仍然是：用尽量少的项目代码，把 Claude Code / Codex 的通用 agent 能力约束在一个清晰、可复用、可审计的跨境政策研究流程里。
