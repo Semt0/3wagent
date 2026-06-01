@@ -82,6 +82,15 @@ sources:
     source_type: tax authority guidance
     notes: STA tax policy index. Use for China-side tax policy leads before verifying exact legal authority.
 
+  - id: cn-sta-tax-case-library
+    title: Tax Case Library
+    authority: State Taxation Administration
+    url: https://www.chinatax.gov.cn/chinatax/c102448/ssalk.html
+    domains: [tax]
+    reliability: B
+    source_type: official case collection
+    notes: Official STA tax case and reference case collection. Use for fact-pattern comparison and supporting context; verify final tax conclusions against statutes, regulations, tax authority guidance, treaty texts or effective normative documents.
+
   - id: cn-tax-treaties
     title: Tax Treaties
     authority: State Taxation Administration
