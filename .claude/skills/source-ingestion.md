@@ -21,7 +21,10 @@ Ingest policy sources and attach structured metadata.
    - URL
    - publication date
    - effective date
+   - amendment date
+   - repeal or expiry date
    - retrieved date
+   - current status
    - language
    - reliability level (S / A / B / C / D)
 3. Separate official sources (S, A, B) from professional commentary (C) and public posts (D).

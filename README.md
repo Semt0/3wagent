@@ -2,7 +2,7 @@
 
 <p align="center">
   <strong>Personal Cross-Border Policy Research Agent Workspace</strong><br>
-  Claude Code subagents for issue routing, policy retrieval, citation checks and report archiving
+  Claude Code subagents for issue routing, policy retrieval, regulatory validity checks and report archiving
 </p>
 
 <p align="center">
@@ -78,6 +78,7 @@ The project therefore does not maintain its own FastAPI / LangChain / LangGraph 
 | Document parsing | Use the built-in `liteparse` skill for PDF / Word / scanned materials |
 | Subagent analysis | Split funds compliance, tax and commercial law into specialist agents |
 | Policy retrieval | Start from `sources/`, then filter by CN / US / HK / SG and funds / tax / commercial domains |
+| Regulatory validity | Check whether laws, notices, guidance and official cases are current, replaced, repealed or time-limited |
 | Citation verification | Check whether conclusions match the cited jurisdiction and source |
 | Report archive | Generate both `report.md` and `report.pdf` under `reports/` |
 
@@ -91,11 +92,12 @@ For a direct policy question:
 1. The Lead Policy Agent identifies jurisdiction, parties, transaction and payment character
 2. It decides the primary domain: funds / tax / commercial
 3. It delegates source retrieval to rag-retriever, starting from `sources/`
-4. It calls the relevant specialist subagents
-5. It runs citation-verifier
-6. It writes the final answer
-7. It saves reports/YYYYMMDD-topic/report.md
-8. It converts the Markdown report to PDF
+4. It runs regulatory-validity-verifier for source status, effective dates and version applicability
+5. It calls the relevant specialist subagents
+6. It runs citation-verifier
+7. It writes the final answer
+8. It saves reports/YYYYMMDD-topic/report.md
+9. It converts the Markdown report to PDF
 ```
 
 For an attached document:
@@ -112,9 +114,10 @@ For an attached document:
    └─ official laws and regulator guidance first
    └─ professional commentary and public account posts as leads only
 
-4. Specialist subagents analyze the issue
-5. citation-verifier checks evidence
-6. The final answer and report files are generated
+4. regulatory-validity-verifier checks status, effective dates and replacement notes
+5. Specialist subagents analyze the issue
+6. citation-verifier checks evidence
+7. The final answer and report files are generated
 ```
 
 ---
@@ -129,6 +132,9 @@ Lead Policy Agent (main session)
 │
 ├── rag-retriever
 │   └── Official policy, law, regulator guidance and secondary source retrieval
+│
+├── regulatory-validity-verifier
+│   └── Source status, effective-date and version-applicability checks
 │
 ├── funds-compliance-analyst
 │   └── Funds flow, bank KYC, AML/CFT, OFAC, sanctions and payment licensing
@@ -159,6 +165,8 @@ If files are attached, document-parser uses liteparse
 Lead Policy Agent creates task packages and chooses subagents
   ↓
 rag-retriever checks `sources/`, then gathers official and secondary sources
+  ↓
+regulatory-validity-verifier checks source status, versions and applicable dates
   ↓
 Specialist subagents analyze
   ├── funds-compliance-analyst
@@ -199,6 +207,7 @@ C and D sources are leads only. They must not be treated as final legal authorit
 【税务分析】
 【民商法规分析】
 【法规与政策索引】
+【法规时效性校验】
 【实务文件清单】
 【风险提示】
 【结论可靠性】

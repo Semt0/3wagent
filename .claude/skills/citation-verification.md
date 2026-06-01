@@ -14,7 +14,8 @@ Verify that policy conclusions are supported by correct jurisdiction and domain 
 2. Verify the cited source belongs to the correct jurisdiction.
 3. Verify the cited source actually supports the exact claim.
 4. Confirm secondary commentary (C, D) is not treated as legal authority.
-5. Flag missing, weak or placeholder evidence explicitly.
+5. Confirm sources with unresolved regulatory validity warnings are not treated as reliable authority.
+6. Flag missing, weak or placeholder evidence explicitly.
 
 ## Reliability labels
 

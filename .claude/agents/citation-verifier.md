@@ -17,6 +17,7 @@ Check:
 4. The source actually supports the claim.
 5. C and D sources are not treated as final authority.
 6. Placeholder, weak or missing evidence is explicitly called out.
+7. Sources with unresolved validity warnings are not treated as reliable authority.
 
 Return reliability labels:
 

@@ -10,6 +10,7 @@ Use this template when the Lead Policy Agent delegates retrieval to `rag-retriev
 - Payment or asset character:
 - Parties and roles:
 - Time sensitivity:
+- Relevant date or "as of" date:
 
 ## Jurisdiction Filters
 
@@ -70,6 +71,7 @@ For each source:
 - domains
 - reliability level
 - source type
+- publication date, effective date, amendment date, repeal or expiry date, retrieved date and status if available
 - applicable point
 - limits or manual-review notes
 

@@ -2,7 +2,7 @@
 
 <p align="center">
   <strong>个人跨境政策研究 Agent Workspace</strong><br>
-  从问题识别、政策检索到法规索引和报告归档，全程交给 Claude Code subagents 执行
+  从问题识别、政策检索、法规时效校验到报告归档，全程交给 Claude Code subagents 执行
 </p>
 
 <p align="center">
@@ -89,6 +89,7 @@ Agent 会输出三项结果：
 
 ```text
 官方法律 / 法规 / 监管指引优先
+先确认法规和指引是否现行有效
 专业机构文章只作为辅助解释
 公众号和媒体内容只作为线索
 没有来源的结论必须降级
@@ -104,6 +105,7 @@ Agent 会输出三项结果：
 | 文档解析 | 内置 `liteparse` skill，优先处理 PDF / Word / 扫描件 |
 | Subagent 分析 | 资金合规、税务、民商法规分别由专项 subagent 处理 |
 | 政策检索 | 先查 `sources/`，再按 CN / US / HK / SG 和 funds / tax / commercial 过滤来源 |
+| 法规时效性校验 | 检查法规、通知、指引和官方案例是否现行有效、被替代或需按交易时间适用历史版本 |
 | 引用校验 | 检查结论是否由正确法域和正确来源支持 |
 | 报告归档 | 同步生成 `report.md` 和 `report.pdf` |
 
@@ -119,11 +121,12 @@ Agent 会输出三项结果：
 1. Lead Policy Agent 识别法域、主体、交易和付款性质
 2. 判断主领域：资金合规 / 税务 / 民商法规
 3. 召唤 rag-retriever 先查 `sources/`，再检索官方来源
-4. 按需调用专项 subagents
-5. 调用 citation-verifier 校验依据
-6. 输出纯文本结论
-7. 写入 reports/YYYYMMDD-topic/report.md
-8. 转换为 reports/YYYYMMDD-topic/report.pdf
+4. 调用 regulatory-validity-verifier 校验法规时效和版本适用性
+5. 按需调用专项 subagents
+6. 调用 citation-verifier 校验依据
+7. 输出纯文本结论
+8. 写入 reports/YYYYMMDD-topic/report.md
+9. 转换为 reports/YYYYMMDD-topic/report.pdf
 ```
 
 ### 模式二：文件 + 问题
@@ -142,15 +145,18 @@ Agent 会输出三项结果：
    └─ 官方法规和监管指引优先
    └─ 专业文章和公众号只作为线索
 
-4. 专项 subagents 分析
+4. regulatory-validity-verifier 校验来源时效
+   └─ 是否现行有效、已废止、被替代、被修订或只适用特定时间点
+
+5. 专项 subagents 分析
    └─ funds-compliance-analyst
    └─ tax-policy-analyst
    └─ commercial-law-analyst
 
-5. citation-verifier 校验
+6. citation-verifier 校验
    └─ 检查法域、来源等级和结论支撑关系
 
-6. 生成最终答复和报告文件
+7. 生成最终答复和报告文件
 ```
 
 ---
@@ -165,6 +171,9 @@ Lead Policy Agent（主会话）
 │
 ├── rag-retriever
 │   └── 检索官方政策、法规、监管指引和辅助资料
+│
+├── regulatory-validity-verifier
+│   └── 校验法规、通知、指引和官方案例的现行有效性与版本适用性
 │
 ├── funds-compliance-analyst
 │   └── 资金流动、银行 KYC、AML/CFT、OFAC、制裁、付款牌照
@@ -195,6 +204,8 @@ Lead Policy Agent 识别问题、法域、主领域和辅助领域
 Lead Policy Agent 形成任务包并决定使用哪些 subagents
   ↓
 rag-retriever 先查 `sources/` registry，再检索官方政策、法规和辅助资料
+  ↓
+regulatory-validity-verifier 校验法规时效、版本和适用时间点
   ↓
 专项 subagents 分析
   ├── funds-compliance-analyst
@@ -247,6 +258,7 @@ C 和 D 级来源只能作为线索，不能作为最终法律依据。
 【税务分析】
 【民商法规分析】
 【法规与政策索引】
+【法规时效性校验】
 【实务文件清单】
 【风险提示】
 【结论可靠性】

@@ -19,7 +19,7 @@ When invoked:
 5. Prefer official laws, regulations, regulator guidance and tax authority materials.
 6. Use professional commentary only as leads.
 7. Never treat public account posts or media as final authority.
-8. Return source packs with title, authority, URL, jurisdiction, domain, reliability level and applicable point.
+8. Return source packs with title, authority, URL, jurisdiction, domain, reliability level, applicable point and available date/status metadata.
 
 Reliability levels:
 

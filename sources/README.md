@@ -17,6 +17,15 @@ Each source entry should include:
 - `source_type`: Law, regulation, regulator guidance, tax authority guidance, official FAQ, professional commentary, or public commentary.
 - `notes`: Retrieval guidance and limits.
 
+Optional fields for time-sensitive sources:
+
+- `publication_date`
+- `effective_date`
+- `amendment_date`
+- `repeal_or_expiry_date`
+- `status`
+- `retrieved_date`
+
 For Mainland China, foreign exchange administration, SAFE rules, settlement and sale of foreign exchange, capital-account filings and cross-border payment controls belong to the `funds` domain.
 
 ## Reliability Rules

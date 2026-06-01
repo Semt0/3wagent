@@ -19,9 +19,10 @@ Answer cross-border policy questions for the United States, Mainland China, Hong
    - Commercial → `commercial-law-analyst`
    - Combined → multiple analysts in parallel
 5. **Retrieve** — Run `rag-retrieval` before writing any conclusion.
-6. **Analyze** — Delegate to specialist subagents with full task packages.
-7. **Verify** — Run `citation-verification` before finalizing.
-8. **Synthesize** — Write the final report in the main session.
+6. **Validate** — Run `regulatory-validity-verification` on source packs before specialist analysis.
+7. **Analyze** — Delegate to specialist subagents with full task packages.
+8. **Verify** — Run `citation-verification` before finalizing.
+9. **Synthesize** — Write the final report in the main session.
 
 ## Domain notes
 

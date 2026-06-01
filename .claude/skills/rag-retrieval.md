@@ -23,7 +23,7 @@ Retrieve policy sources with jurisdiction, domain and reliability metadata.
    - Prefer S and A sources.
    - Use B sources as supporting evidence.
    - Use C and D sources only as leads.
-7. Record for each result: source id, title, authority, URL, jurisdiction, domain, reliability level, applicable point.
+7. Record for each result: source id, title, authority, URL, jurisdiction, domain, reliability level, applicable point and available date/status metadata.
 8. If official support is missing, flag the conclusion as preliminary.
 
 ## Output

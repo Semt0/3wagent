@@ -6,6 +6,7 @@ This document defines the next engineering layer for 3wagent without requiring a
 
 - Make retrieval start from curated official sources before open web search.
 - Preserve jurisdiction, domain and reliability metadata with every source.
+- Verify regulatory validity, effective dates and version applicability before analysis.
 - Keep citation verification separate from specialist analysis.
 - Provide a clear migration path to MCP tools when repeated manual steps become frequent.
 
@@ -17,7 +18,9 @@ This document defines the next engineering layer for 3wagent without requiring a
 - `sources/sg.yaml`
 - `templates/retrieval-task.md`
 - `.claude/agents/rag-retriever.md`
+- `.claude/agents/regulatory-validity-verifier.md`
 - `.claude/skills/rag-retrieval.md`
+- `.claude/skills/regulatory-validity-verification.md`
 - `.claude/skills/source-ingestion.md`
 - `.claude/skills/citation-verification.md`
 
@@ -48,7 +51,8 @@ The retrieval layer should never strip metadata. Final analysis needs the metada
 4. Fetch or search within official sources first.
 5. Use broad web search only when the registry does not cover the issue.
 6. Label each result with source metadata and a short applicable point.
-7. Flag any conclusion that lacks `S`, `A` or `B` support.
+7. Run regulatory validity verification for source status, effective dates, replacements and applicable versions.
+8. Flag any conclusion that lacks `S`, `A` or `B` support.
 
 ## Proposed MCP Tools
 
@@ -121,6 +125,53 @@ Input:
 ```
 
 Output should include candidate URLs, titles, authority match notes and whether the result is official.
+
+### `regulatory_validity.verify`
+
+Input:
+
+```json
+{
+  "relevant_date": "2026-06-01",
+  "sources": [
+    {
+      "id": "cn-foreign-exchange-regulations",
+      "title": "Regulations of the People's Republic of China on Foreign Exchange Administration",
+      "authority": "State Council of the People's Republic of China",
+      "url": "https://www.gov.cn/zwgk/2008-08/06/content_1065910.htm",
+      "jurisdiction": "CN",
+      "domains": ["funds"],
+      "reliability": "S"
+    }
+  ]
+}
+```
+
+Output:
+
+```json
+{
+  "validity_findings": [
+    {
+      "source_id": "cn-foreign-exchange-regulations",
+      "publication_date": "2008-08-05",
+      "effective_date": "2008-08-05",
+      "current_status": "Currently effective",
+      "applicable_to_relevant_date": true,
+      "replacement_or_amendment": null,
+      "notes": "Verify against the official legal database or State Council page before final citation."
+    }
+  ]
+}
+```
+
+Validity labels:
+
+- Currently effective
+- Likely effective but requiring manual review
+- Historical version / replaced
+- Repealed / should not be relied on
+- Unable to confirm validity
 
 ### `citation_checker.verify`
 
