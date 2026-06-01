@@ -37,6 +37,15 @@ sources:
     source_type: regulator guidance
     notes: SAFE official policy and regulation index. Use as the first SAFE source for current-account FX, capital-account FX, cross-border receipts and payments, foreign debt, outbound investment and cross-border guarantee questions.
 
+  - id: cn-safe-official-portal
+    title: Official Portal
+    authority: State Administration of Foreign Exchange
+    url: http://m.safe.gov.cn/safe/index.html
+    domains: [funds]
+    reliability: A
+    source_type: regulator portal
+    notes: SAFE official mobile portal. Use for navigation and locating current SAFE materials; cite specific regulations, normative documents, business guides or notices for final conclusions.
+
   - id: cn-safe-administrative-normative-documents
     title: Administrative Normative Documents
     authority: State Administration of Foreign Exchange
