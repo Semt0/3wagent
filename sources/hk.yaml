@@ -6,6 +6,7 @@ sources:
     authority: Hong Kong e-Legislation
     url: https://www.elegislation.gov.hk/hk/cap571
     domains: [funds]
+    subdomains: [aml-kyc]
     reliability: S
     source_type: official legal database
     notes: Primary Hong Kong AML/CFT statute.
@@ -15,6 +16,7 @@ sources:
     authority: Hong Kong Monetary Authority
     url: https://www.hkma.gov.hk/eng/key-functions/banking/anti-money-laundering-and-counter-financing-of-terrorism/
     domains: [funds]
+    subdomains: [aml-kyc]
     reliability: A
     source_type: regulator guidance
     notes: HKMA AML/CFT supervision page and guidance entry point for banks and stored value facilities.
@@ -24,6 +26,7 @@ sources:
     authority: Securities and Futures Commission
     url: https://www.sfc.hk/en/Rules-and-standards/Anti-money-laundering-and-counter-financing-of-terrorism
     domains: [funds, commercial]
+    subdomains: [aml-kyc]
     reliability: A
     source_type: regulator guidance
     notes: Use for licensed corporations, SFC-regulated activity and AML/CFT obligations.
@@ -72,3 +75,12 @@ sources:
     reliability: A
     source_type: official registry guidance
     notes: Use for filing, registration and company administration practice.
+
+  - id: hk-hklii
+    title: Hong Kong Legal Information Institute
+    authority: University of Hong Kong
+    url: https://www.hklii.hk/
+    domains: [funds, tax, commercial]
+    reliability: B
+    source_type: official case database
+    notes: Free public access to Hong Kong court judgments. Use for analogous case searches across all domains. Note that very recent judgments may not yet be uploaded.

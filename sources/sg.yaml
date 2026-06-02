@@ -6,6 +6,7 @@ sources:
     authority: Monetary Authority of Singapore
     url: https://www.mas.gov.sg/regulation/anti-money-laundering
     domains: [funds]
+    subdomains: [aml-kyc]
     reliability: A
     source_type: regulator guidance
     notes: MAS AML/CFT entry point for financial institutions and sector guidance.
@@ -72,3 +73,12 @@ sources:
     reliability: A
     source_type: official registry guidance
     notes: Use for Singapore business registration and entity setup questions.
+
+  - id: sg-judiciary-cases
+    title: Singapore Courts - Judgments
+    authority: Supreme Court of Singapore
+    url: https://www.judiciary.gov.sg/judgments
+    domains: [funds, tax, commercial]
+    reliability: B
+    source_type: official case database
+    notes: Official Singapore court judgments. Use for analogous case searches. For deeper case-law research, LawNet (subscription) may be required.

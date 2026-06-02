@@ -6,6 +6,7 @@ sources:
     authority: U.S. Department of the Treasury, Office of Foreign Assets Control
     url: https://ofac.treasury.gov/sanctions-programs-and-country-information
     domains: [funds]
+    subdomains: [sanctions]
     reliability: A
     source_type: regulator guidance
     notes: Official OFAC sanctions program index. Use for sanctions scope and program-specific leads.
@@ -15,6 +16,7 @@ sources:
     authority: U.S. Department of the Treasury, Office of Foreign Assets Control
     url: https://sanctionssearch.ofac.treas.gov/
     domains: [funds]
+    subdomains: [sanctions]
     reliability: A
     source_type: official search
     notes: Official OFAC sanctions list search. Use for entity and person screening references.
@@ -24,6 +26,7 @@ sources:
     authority: Financial Crimes Enforcement Network
     url: https://www.fincen.gov/resources/statutes-regulations/bank-secrecy-act
     domains: [funds]
+    subdomains: [aml-kyc]
     reliability: A
     source_type: regulator guidance
     notes: Official FinCEN overview of BSA obligations and related AML regulation links.
@@ -72,3 +75,12 @@ sources:
     reliability: A
     source_type: official registry guidance
     notes: Useful for Delaware entity formation and filing practice; verify statutes separately when needed.
+
+  - id: us-courtlistener
+    title: CourtListener
+    authority: Free Law Project
+    url: https://www.courtlistener.com/
+    domains: [funds, tax, commercial]
+    reliability: B
+    source_type: official case database
+    notes: Free U.S. federal and state court opinion database. Use for analogous case searches. Coverage is extensive but not complete; verify against PACER for official records if needed.

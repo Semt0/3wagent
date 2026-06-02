@@ -99,6 +99,38 @@
 | Agent-native 重构 | 转向 Claude Code rules / skills / subagents |
 | 报告归档 | 固定生成 Markdown 和 PDF 报告文件 |
 
+---
+
+## 阶段六：输入输出要求细化
+
+**时间**：2026-06-02
+
+客户进一步厘清了输入输出要求：输入为文字形式的政策问题，输出包含 5 项明确内容，其中第 4 项"涉及哪些现行法规"为优先级重点。
+
+核心变化：
+
+- **问题分类细化**：区分 `pure funds-forex`（外汇管理）与 `pure funds-banking`（银行合规/AML/制裁），不再笼统归为 funds
+- **新增类案检索**：`rag-retriever` 增加官方案例数据库检索能力；`sources/` 新增 4 个 B 级案例数据库入口（中国裁判文书网、HKLII、Singapore Courts、CourtListener）
+- **现行法规清单成为优先级输出**：`regulatory-validity-verifier` 新增"现行法规清单"作为必输出项；`citation-verifier` 增加法规清单完整性校验
+- **单层级修订关系追溯**：`regulatory-validity-verifier` 新增修订关系追溯（单层级），输出"现行法规 ← 被替代/修订/废止的上位法规"
+- **报告模板重写**：从 10 个章节调整为 5 项核心输出 + 辅助章节，匹配客户要求
+
+修改的文件：
+
+- `.claude/CLAUDE.md` — 更新工作流、输出要求和操作原则
+- `.claude/skills/policy-research.md` — 增加分类步骤、类案检索指引、输出契约
+- `.claude/agents/rag-retriever.md` + `.claude/skills/rag-retrieval.md` — 增加 funds 子领域区分、案例检索要求、现行法规清单输出
+- `.claude/agents/regulatory-validity-verifier.md` + `.claude/skills/regulatory-validity-verification.md` — 强化修订追溯、新增现行法规清单和修订关系表输出
+- `.claude/agents/citation-verifier.md` — 增加案例引用校验、修订关系校验、法规清单完整性校验
+- `templates/report.md` — 重写为 5 项核心输出格式
+- `templates/retrieval-task.md` — 增加 classification 字段、案例检索要求、现行法规清单输出
+- `sources/cn.yaml` / `us.yaml` / `hk.yaml` / `sg.yaml` — 新增案例数据库入口、部分 funds 来源增加 `subdomains` 字段
+- `README.md` / `README.zh-CN.md` / `sources/README.md` — 同步更新文档
+
+验证结果：YAML 语法通过、模板渲染通过、PDF 转换通过。
+
+---
+
 当前系统的核心形态：
 
 - **运行方式**：Claude Code 主会话作为 Lead Policy Agent

@@ -17,10 +17,10 @@ Lead Policy Agent (main Claude Code session)
 
 ## Operating Principles
 
-1. **Frame before acting.** Identify issue profile, domains, jurisdictions, retrieval plan, required skills and output contract before delegating.
+1. **Frame before acting.** Identify issue profile, domains, jurisdictions, retrieval plan, required skills and output contract before delegating. **Explicitly classify** whether the issue is a pure funds-forex, pure funds-banking, pure tax, or cross-domain problem.
 2. **Subagents do isolated work.** Every delegation must include a compact task package with enough context. Subagents return evidence, not polished reports.
-3. **Retrieve before concluding.** Use RAG or search tools before any legal, tax or compliance conclusion. Start from `sources/` registries before broad web search.
-4. **Validate source currency before analysis.** Run regulatory validity verification after retrieval when laws, regulations, notices, guidance or official cases are used.
+3. **Retrieve before concluding.** Use RAG or search tools before any legal, tax or compliance conclusion. Start from `sources/` registries before broad web search. **Include case-law databases** when searching for analogous public judgments.
+4. **Validate source currency before analysis.** Run regulatory validity verification after retrieval. **Trace single-tier amendment lineage** (what prior regulation the current one amended, replaced or repealed).
 5. **Verify before shipping.** Run citation verification before synthesis and report archiving.
 6. **Chinese output by default.** Keep final answers in Chinese unless the user asks otherwise.
 7. **No separate app framework.** Do not invent or maintain a separate backend when project rules, skills and subagents are sufficient.
@@ -39,9 +39,9 @@ Lead Policy Agent (main Claude Code session)
 ## Workflow
 
 1. **Intake** — If documents attached, use the `document-parse` skill first.
-2. **Frame** — Identify the issue profile, domains, jurisdictions.
-3. **Retrieve** — Delegate to `rag-retriever` for official sources.
-4. **Validate** — Delegate to `regulatory-validity-verifier` to check source status, effective dates and version applicability.
+2. **Frame** — Identify the issue profile, domains, jurisdictions. **Explicitly classify**: pure funds-forex / pure funds-banking / pure tax / cross-domain. List involved sub-domains.
+3. **Retrieve** — Delegate to `rag-retriever` for official sources. **Include case-law database searches** for analogous public judgments and retrievable answers.
+4. **Validate** — Delegate to `regulatory-validity-verifier` to check source status, effective dates, version applicability and **single-tier amendment lineage** (what prior regulation the current one amended, replaced or repealed).
 5. **Analyze** — Delegate to domain specialists (funds / tax / commercial).
 6. **Verify** — Delegate to `citation-verifier` before finalizing.
 7. **Synthesize** — Write the final report in the main session.
@@ -65,16 +65,17 @@ Use `tools/render_report.py` as the default local helper for creating report fol
 
 The final answer should include the generated report paths.
 
-## Required Output Sections
+## Required Output Sections (5 items)
 
-- 【问题识别】
-- 【简要结论】
-- 【资金流动 / 银行合规 / AML / 制裁分析】
-- 【税务分析】
-- 【民商法规分析】
-- 【法规与政策索引】
-- 【法规时效性校验】
-- 【实务文件清单】
+The final report must address the following 5 items. **Item 4 is the priority.**
+
+1. **【问题分类】** — Pure funds-forex / pure funds-banking / pure tax / cross-domain. List involved sub-domains and transaction type.
+2. **【结论或考量维度】** — Directly quotable conclusions, or dimensions that must be considered if no direct conclusion is available.
+3. **【类案与公开答案】** — Analogous public judgments with case numbers, courts, key holdings and quoted excerpts. Other publicly retrievable answers.
+4. **【涉及现行法规】** (Priority) — A complete, numbered list of all currently effective laws, regulations and guidance involved in the analysis, with jurisdiction, domain, issuing authority and current status.
+5. **【法规修订关系】** — For each currently effective regulation, the single-tier prior regulation it amended, replaced or repealed, with relationship type and notes.
+
+Supporting sections:
 - 【风险提示】
 - 【结论可靠性】
 - 【报告文件】

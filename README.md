@@ -74,12 +74,13 @@ The project therefore does not maintain its own FastAPI / LangChain / LangGraph 
 
 | Feature | Description |
 |---------|-------------|
-| Issue routing | Identify jurisdictions, transaction type, payment character and primary domain |
+| Issue routing & classification | Identify jurisdictions, transaction type, payment character and primary domain; classify as pure funds-forex / pure funds-banking / pure tax / cross-domain |
 | Document parsing | Use the built-in `liteparse` skill for PDF / Word / scanned materials |
-| Subagent analysis | Split funds compliance, tax and commercial law into specialist agents |
+| Subagent analysis | Split funds compliance (forex vs banking/AML), tax and commercial law into specialist agents |
 | Policy retrieval | Start from `sources/`, then filter by CN / US / HK / SG and funds / tax / commercial domains |
-| Regulatory validity | Check whether laws, notices, guidance and official cases are current, replaced, repealed or time-limited |
-| Citation verification | Check whether conclusions match the cited jurisdiction and source |
+| Case-law retrieval | Search official case databases (wenshu, HKLII, Singapore Courts, CourtListener) for analogous judgments |
+| Regulatory validity | Check whether laws, notices, guidance and official cases are current, replaced, repealed or time-limited; trace single-tier amendment lineage |
+| Citation verification | Check whether conclusions match the cited jurisdiction and source; verify case citations and amendment lineage |
 | Report archive | Generate both `report.md` and `report.pdf` under `reports/` |
 
 ---
@@ -90,12 +91,12 @@ For a direct policy question:
 
 ```text
 1. The Lead Policy Agent identifies jurisdiction, parties, transaction and payment character
-2. It decides the primary domain: funds / tax / commercial
+2. It classifies the issue: pure funds-forex / pure funds-banking / pure tax / cross-domain
 3. It delegates source retrieval to rag-retriever, starting from `sources/`
-4. It runs regulatory-validity-verifier for source status, effective dates and version applicability
+4. It runs regulatory-validity-verifier for source status, effective dates, version applicability and single-tier amendment lineage
 5. It calls the relevant specialist subagents
-6. It runs citation-verifier
-7. It writes the final answer
+6. It runs citation-verifier (including case-law citations and amendment lineage)
+7. It writes the final answer with 5 required output items
 8. It saves reports/YYYYMMDD-topic/report.md
 9. It converts the Markdown report to PDF
 ```
@@ -198,17 +199,14 @@ C and D sources are leads only. They must not be treated as final legal authorit
 
 ---
 
-## Output Shape
+## Output Shape (5 required items)
 
 ```text
-【问题识别】
-【简要结论】
-【资金流动 / 银行合规 / AML / 制裁分析】
-【税务分析】
-【民商法规分析】
-【法规与政策索引】
-【法规时效性校验】
-【实务文件清单】
+【问题分类】
+【结论或考量维度】
+【类案与公开答案】
+【涉及现行法规】          ← priority
+【法规修订关系】
 【风险提示】
 【结论可靠性】
 【报告文件】
@@ -232,11 +230,11 @@ docs/
   rag-mcp-design.md             RAG / MCP tool design draft
 
 sources/
-  README.md                     Source registry schema and reliability notes
-  cn.yaml                       Mainland China official source index
-  us.yaml                       United States official source index
-  hk.yaml                       Hong Kong official source index
-  sg.yaml                       Singapore official source index
+  README.md                     Source registry schema, reliability notes and sub-domain taxonomy
+  cn.yaml                       Mainland China official source index (includes wenshu case database)
+  us.yaml                       United States official source index (includes CourtListener case database)
+  hk.yaml                       Hong Kong official source index (includes HKLII case database)
+  sg.yaml                       Singapore official source index (includes Singapore Courts case database)
 
 templates/
   report.md                     Archived report template
