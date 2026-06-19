@@ -11,28 +11,21 @@ Ingest policy sources and attach structured metadata.
 ## Steps
 
 1. Identify the source type and jurisdiction.
-2. Extract metadata:
+2. Extract metadata per `sources/README.md` schema:
    - stable id
    - jurisdiction
    - domain (funds | tax | commercial)
+   - subdomains (see `config/routing.yaml` for valid values)
    - source type
    - authority
    - title
    - URL
-   - publication date
-   - effective date
-   - amendment date
-   - repeal or expiry date
-   - retrieved date
+   - publication date, effective date, amendment date, repeal or expiry date, retrieved date
    - current status
    - language
-   - reliability level (S / A / B / C / D)
-3. Separate official sources (S, A, B) from professional commentary (C) and public posts (D).
-4. Add curated reusable sources to the matching registry file:
-   - `sources/cn.yaml`
-   - `sources/us.yaml`
-   - `sources/hk.yaml`
-   - `sources/sg.yaml`
+   - reliability level (S / A / B / C / D — see `config/source-levels.yaml`)
+3. Separate official sources (S, A, B) from professional commentary (C) and public posts (D) per `config/source-levels.yaml`.
+4. Add curated reusable sources to the matching registry file (paths in `config/jurisdictions.yaml`).
 5. Store with metadata attached; do not strip it.
 
 ## Output

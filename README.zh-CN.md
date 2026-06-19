@@ -226,6 +226,8 @@ Lead Policy Agent 生成最终纯文本答复
 
 ## 路由规则
 
+定义在 `config/routing.yaml`（唯一来源）。
+
 | 触发条件 | 主分析方向 |
 |----------|------------|
 | SAFE、外汇管理局、结售汇、经常项目、资本项目、跨境收支 | 资金合规 — 外汇管理 |
@@ -238,6 +240,8 @@ Lead Policy Agent 生成最终纯文本答复
 ---
 
 ## 来源等级
+
+定义在 `config/source-levels.yaml`（唯一来源）。
 
 | 等级 | 来源类型 |
 |------|----------|
@@ -252,6 +256,8 @@ C 和 D 级来源只能作为线索，不能作为最终法律依据。
 ---
 
 ## 输出结构（5 项核心内容）
+
+定义在 `config/output-contract.yaml`（唯一来源）。
 
 ```text
 【问题分类】
@@ -271,12 +277,33 @@ C 和 D 级来源只能作为线索，不能作为最终法律依据。
 ```text
 .claude/
   CLAUDE.md                     Claude Code 项目级规则和 lead agent 约束
-  agents/                       项目级 subagents
-  skills/                       政策研究、检索、引用校验和来源采集规则
+  principles.md                 7 条操作原则
+  contracts.md                  任务包格式和输出契约
+  agents/                       项目级 subagents（按关注点组织）
+    retrieval/rag-retriever.md
+    validation/regulatory-validity-verifier.md
+    validation/citation-verifier.md
+    analysis/funds-compliance-analyst.md
+    analysis/tax-policy-analyst.md
+    analysis/commercial-law-analyst.md
+    parsing/document-parser.md
+  skills/                       可复用技能规程（按关注点组织）
+    retrieval/rag-retrieval.md
+    retrieval/source-ingestion.md
+    validation/regulatory-validity-verification.md
+    validation/citation-verification.md
+    analysis/policy-research.md
+    parsing/document-parse.md
 
 .agents/
   skills/
     liteparse/                  项目内置的第三方文档解析 skill
+
+config/                         策略数据唯一来源
+  routing.yaml                  分类规则、关键词、子领域、agent 映射
+  source-levels.yaml            S/A/B/C/D 等级唯一定义
+  jurisdictions.yaml            法域设置、类案数据库、来源注册表路径
+  output-contract.yaml          必需和辅助输出节段定义
 
 docs/
   rag-mcp-design.md             RAG / MCP 工具设计草案
@@ -293,7 +320,16 @@ templates/
   retrieval-task.md             rag-retriever 任务包模板
 
 tools/
-  render_report.py              生成 report.md 并尽量转换 report.pdf
+  render_report.py              薄 CLI 编排层
+  build_markdown.py             Markdown 生成工具
+  convert_pdf.py                PDF 转换（pandoc / weasyprint / reportlab）
+  validate_config.py            配置 YAML schema 和一致性校验
+  validate_registry.py          来源注册表校验
+
+tests/
+  test_config.py                配置 YAML 测试
+  test_registry.py              来源注册表测试
+  test_render.py                Markdown 生成和 PDF 回退测试
 
 reports/
   .gitkeep                      报告生成目录占位

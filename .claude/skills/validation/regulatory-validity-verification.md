@@ -41,6 +41,8 @@ Verify whether policy sources are current and applicable to the relevant time pe
 6. Flag contradictions between old and new sources.
 7. If validity cannot be confirmed from official materials, require manual review.
 
+Amendment lineage claims must be supported by S or A level sources (see `config/source-levels.yaml`).
+
 ## Validity Labels
 
 - Currently effective
@@ -59,7 +61,7 @@ Return three items:
 Source | Publication date | Effective date | Current status | Applicable to relevant date | Replacement / amendment | Notes
 ```
 
-2. **Currently-effective regulations list (priority):**
+2. **Currently-effective regulations list (priority — see `config/output-contract.yaml`):**
 
 ```text
 No. | Regulation title | Jurisdiction | Domain | Issuing authority | Current status

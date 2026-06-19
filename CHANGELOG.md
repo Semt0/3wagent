@@ -138,3 +138,32 @@
 - **文档解析**：内置 `liteparse` skill
 - **输出形式**：对话纯文本答复 + `reports/` 下的 Markdown / PDF 报告
 - **扩展方向**：后续按需加入 RAG 工具和 MCP 工具，而不是提前搭建臃肿 app runtime
+
+---
+
+## 阶段七：架构重构 — 配置分离与关注点组织
+
+**时间**：2026-06-19
+
+基于 Harness Engineering 的设计思想（依赖方向单向、配置与逻辑分离、按关注点组织），对项目进行系统性重构。
+
+核心变化：
+
+- **新增 config 层**：抽取散落在 4-6 个文件中的重复知识，集中为结构化 YAML 唯一来源
+  - `config/routing.yaml` — 分类规则、关键词、子领域、agent 映射
+  - `config/source-levels.yaml` — S/A/B/C/D 等级唯一定义
+  - `config/jurisdictions.yaml` — 法域设置、类案数据库、来源注册表路径
+  - `config/output-contract.yaml` — 5 项核心输出 + 3 项辅助输出节段定义
+- **agents/skills 按关注点分目录**：从扁平结构重组为 retrieval / validation / analysis / parsing 四个子目录
+- **消除知识重复**：agent 和 skill 文件不再复写策略定义，改为引用 config/
+- **拆薄 CLAUDE.md**：从 ~94 行压缩到 ~54 行，操作原则和契约分别提取到 `principles.md` 和 `contracts.md`
+- **拆分 render_report.py**：拆为 `build_markdown.py`（Markdown 生成）+ `convert_pdf.py`（PDF 转换）+ `render_report.py`（薄编排层）
+- **新增校验脚本**：`validate_config.py` 和 `validate_registry.py`，校验 config 和来源注册表的一致性
+- **新增测试**：`tests/test_config.py`、`tests/test_registry.py`、`tests/test_render.py`，共 58 个测试用例
+- **更新 sources/README.md**：reliability 规则改为引用 `config/source-levels.yaml`
+
+架构原则：
+
+- config/ 是所有策略数据的唯一来源，改一处生效全局
+- agents/skills 按关注点组织，改检索逻辑只看 retrieval/ 目录
+- CLAUDE.md 只做顶层编排，具体规则通过引用指向 config/ 和 principles.md

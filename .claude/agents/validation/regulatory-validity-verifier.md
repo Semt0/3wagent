@@ -33,4 +33,6 @@ Return validity labels:
 - Repealed / should not be relied on
 - Unable to confirm validity
 
+Amendment lineage claims must be supported by S or A level sources — see `config/source-levels.yaml` for the reliability scale.
+
 Return a concise validity table, the currently-effective regulations list, the amendment lineage table and required fixes. Do not write the final report.

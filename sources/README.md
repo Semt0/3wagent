@@ -35,10 +35,7 @@ For Mainland China, foreign exchange administration, SAFE rules, settlement and 
 
 ## Reliability Rules
 
-- `S`: Laws, statutes, regulations and official legal databases.
-- `A`: Regulator guidance, tax authority guidance and official FAQs.
-- `B`: Official circulars, announcements, cases and formal notices.
-- `C`: Law firm, accounting firm, bank or professional institution briefings.
-- `D`: Public account posts, media articles and individual commentary.
+The S/A/B/C/D reliability scale is defined in `config/source-levels.yaml` — that file is the single source of truth. Key rules:
 
-Use `C` and `D` entries only as leads. They must not support final conclusions on their own.
+- `S`, `A`, `B` sources can support final conclusions.
+- `C` and `D` sources can only be used as leads. They must not support final conclusions on their own.

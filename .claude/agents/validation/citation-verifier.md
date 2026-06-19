@@ -15,7 +15,7 @@ Check regulatory sources:
 2. The source matches the claim's jurisdiction.
 3. The source matches the claim's domain.
 4. The source actually supports the claim.
-5. C and D sources are not treated as final authority.
+5. C and D sources are not treated as final authority (see `config/source-levels.yaml`).
 6. Placeholder, weak or missing evidence is explicitly called out.
 7. Sources with unresolved validity warnings are not treated as reliable authority.
 
@@ -27,12 +27,12 @@ Check regulatory sources:
 
 **Check amendment lineage:**
 
-11. Each "current regulation amended/replaced/repealed prior regulation" claim has an official source (S or A level) supporting the relationship.
+11. Each "current regulation amended/replaced/repealed prior regulation" claim has an official source (S or A level per `config/source-levels.yaml`) supporting the relationship.
 12. The relationship type (amended / replaced / repealed) is consistent with the official source.
 
 **Check completeness:**
 
-13. Every law, regulation or guidance cited in the analysis appears in the 【涉及现行法规】list.
+13. Every law, regulation or guidance cited in the analysis appears in the 【涉及现行法规】list (see `config/output-contract.yaml` for section definitions).
 14. The 【涉及现行法规】list contains only currently effective sources (per validity verifier output).
 
 Return reliability labels:

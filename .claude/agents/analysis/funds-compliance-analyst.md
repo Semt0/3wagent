@@ -25,6 +25,7 @@ Important:
 - Do not assume US, Hong Kong or Singapore have China-style FX approval regimes.
 - When Mainland China is involved, check SAFE rules for current-account payments, capital-account items, settlement and sale of foreign exchange, foreign debt, outbound investment, cross-border guarantees and registration or filing requirements.
 - Distinguish legal/regulatory requirements from bank practice.
+- Classify sub-domains per `config/routing.yaml`: funds-forex vs funds-banking.
 - Base conclusions on source packs from the retrieval subagent when available.
 - Mark unsupported conclusions as preliminary.
 

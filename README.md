@@ -187,6 +187,8 @@ report.md is converted to report.pdf
 
 ## Source Levels
 
+Defined in `config/source-levels.yaml` (single source of truth).
+
 | Level | Source Type |
 |-------|-------------|
 | S | Laws, statutes, regulations and official legal databases |
@@ -200,6 +202,8 @@ C and D sources are leads only. They must not be treated as final legal authorit
 ---
 
 ## Output Shape (5 required items)
+
+Defined in `config/output-contract.yaml` (single source of truth).
 
 ```text
 【问题分类】
@@ -219,12 +223,33 @@ C and D sources are leads only. They must not be treated as final legal authorit
 ```text
 .claude/
   CLAUDE.md                     Project rules and lead-agent constraints
-  agents/                       Project subagents
-  skills/                       Research, retrieval, citation and ingestion rules
+  principles.md                 7 operating principles
+  contracts.md                  Task package format and output contract
+  agents/                       Project subagents (organized by concern)
+    retrieval/rag-retriever.md
+    validation/regulatory-validity-verifier.md
+    validation/citation-verifier.md
+    analysis/funds-compliance-analyst.md
+    analysis/tax-policy-analyst.md
+    analysis/commercial-law-analyst.md
+    parsing/document-parser.md
+  skills/                       Reusable skill procedures (organized by concern)
+    retrieval/rag-retrieval.md
+    retrieval/source-ingestion.md
+    validation/regulatory-validity-verification.md
+    validation/citation-verification.md
+    analysis/policy-research.md
+    parsing/document-parse.md
 
 .agents/
   skills/
     liteparse/                  Built-in third-party document parsing skill
+
+config/                         Strategy data — single source of truth
+  routing.yaml                  Classifications, keywords, sub-domains, agent mappings
+  source-levels.yaml            S/A/B/C/D reliability scale
+  jurisdictions.yaml            Jurisdiction settings, case-law databases, registry paths
+  output-contract.yaml          Required and supporting report sections
 
 docs/
   rag-mcp-design.md             RAG / MCP tool design draft
@@ -241,7 +266,16 @@ templates/
   retrieval-task.md             rag-retriever task package template
 
 tools/
-  render_report.py              Generate report.md and try to convert report.pdf
+  render_report.py              Thin CLI orchestration for report generation
+  build_markdown.py             Markdown generation utilities
+  convert_pdf.py                PDF conversion (pandoc / weasyprint / reportlab)
+  validate_config.py            Config YAML schema and consistency validation
+  validate_registry.py          Source registry validation
+
+tests/
+  test_config.py                Config YAML tests
+  test_registry.py              Source registry tests
+  test_render.py                Markdown generation and PDF fallback tests
 
 reports/
   .gitkeep                      Report directory placeholder

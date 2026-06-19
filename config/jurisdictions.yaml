@@ -1,0 +1,44 @@
+# Jurisdiction configuration — single source of truth for jurisdiction settings,
+# case-law databases and source registry paths.
+# All agents and skills must reference this file instead of duplicating jurisdiction lists.
+
+jurisdictions:
+  - id: CN
+    label_en: Mainland China
+    label_zh: 中国内地
+    case_law_databases:
+      - name: 中国裁判文书网
+        url: https://wenshu.court.gov.cn/
+        reliability: B
+        notes: Official PRC court judgment database. Note access restrictions and limited full-text availability for some cases.
+    registry: sources/cn.yaml
+
+  - id: US
+    label_en: United States
+    label_zh: 美国
+    case_law_databases:
+      - name: CourtListener
+        url: https://www.courtlistener.com/
+        reliability: B
+        notes: Free U.S. federal and state court opinion database. Coverage is extensive but not complete; verify against PACER for official records if needed.
+    registry: sources/us.yaml
+
+  - id: HK
+    label_en: Hong Kong
+    label_zh: 香港
+    case_law_databases:
+      - name: HKLII
+        url: https://www.hklii.hk/
+        reliability: B
+        notes: Free public access to Hong Kong court judgments. Very recent judgments may not yet be uploaded.
+    registry: sources/hk.yaml
+
+  - id: SG
+    label_en: Singapore
+    label_zh: 新加坡
+    case_law_databases:
+      - name: Singapore Courts
+        url: https://www.judiciary.gov.sg/
+        reliability: B
+        notes: Official Singapore court judgments. For deeper case-law research, LawNet (subscription) may be required.
+    registry: sources/sg.yaml

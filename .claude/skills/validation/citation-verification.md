@@ -13,7 +13,7 @@ Verify that policy conclusions are supported by correct jurisdiction and domain 
 1. Check that every material conclusion has at least one cited source.
 2. Verify the cited source belongs to the correct jurisdiction.
 3. Verify the cited source actually supports the exact claim.
-4. Confirm secondary commentary (C, D) is not treated as legal authority.
+4. Confirm C and D sources are not treated as legal authority (see `config/source-levels.yaml`).
 5. Confirm sources with unresolved regulatory validity warnings are not treated as reliable authority.
 6. Flag missing, weak or placeholder evidence explicitly.
 
