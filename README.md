@@ -240,10 +240,7 @@ Defined in `config/output-contract.yaml` (single source of truth).
     validation/citation-verification.md
     analysis/policy-research.md
     parsing/document-parse.md
-
-.agents/
-  skills/
-    liteparse/                  Built-in third-party document parsing skill
+    parsing/liteparse.md        Built-in third-party document parsing skill
 
 config/                         Strategy data — single source of truth
   routing.yaml                  Classifications, keywords, sub-domains, agent mappings
@@ -303,10 +300,10 @@ source .venv/bin/activate
 uv sync --extra dev
 ```
 
-`liteparse` is already included in the repository. Run this only when refreshing or reinstalling the skill:
+`liteparse` is included as a built-in skill at `.claude/skills/parsing/liteparse.md`. The skill still requires the LiteParse CLI (Node 18+) to be installed globally:
 
 ```bash
-npx skills add run-llama/llamaparse-agent-skills --skill liteparse
+npm i -g @llamaindex/liteparse
 ```
 
 Check config files:

@@ -11,7 +11,7 @@ Parse PDF, Word, image, spreadsheet or presentation inputs into structured text.
 
 1. Identify the file type and whether it is text-based, scanned, table-heavy or layout-heavy.
 2. Choose parsing strategy:
-   - Text PDF → `liteparse` when available.
+   - Text PDF → `liteparse` (see `.claude/skills/parsing/liteparse.md`) when available.
    - Table-heavy PDF → preserve table structure, page numbers and section titles.
    - Scanned PDF → OCR-capable parsing; mark OCR uncertainty.
    - Layout-heavy PDF → layout-aware parser.

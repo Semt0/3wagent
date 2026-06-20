@@ -294,10 +294,7 @@ C 和 D 级来源只能作为线索，不能作为最终法律依据。
     validation/citation-verification.md
     analysis/policy-research.md
     parsing/document-parse.md
-
-.agents/
-  skills/
-    liteparse/                  项目内置的第三方文档解析 skill
+    parsing/liteparse.md        项目内置的第三方文档解析 skill
 
 config/                         策略数据唯一来源
   routing.yaml                  分类规则、关键词、子领域、agent 映射
@@ -357,10 +354,10 @@ source .venv/bin/activate
 uv sync --extra dev
 ```
 
-`liteparse` 已随仓库提供。只有需要刷新或重新安装该 skill 时，才运行：
+`liteparse` 已作为内置 skill 放在 `.claude/skills/parsing/liteparse.md`。使用时仍需全局安装 LiteParse CLI（Node 18+）：
 
 ```bash
-npx skills add run-llama/llamaparse-agent-skills --skill liteparse
+npm i -g @llamaindex/liteparse
 ```
 
 检查配置文件：

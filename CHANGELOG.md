@@ -60,7 +60,7 @@
   - `commercial-law-analyst`
   - `citation-verifier`
 - 新增 `.claude/skills/`，沉淀文档解析、政策研究、RAG 检索、引用校验和来源采集规则
-- 引入 `liteparse`，并将其作为项目内置 PDF/文档解析 skill 放入 `.agents/skills/liteparse/`
+- 引入 `liteparse`，并将其作为项目内置 PDF/文档解析 skill 放入 `.claude/skills/parsing/liteparse.md`
 - 精简 `pyproject.toml`，仅保留最小项目元数据和开发工具
 - 精简 `.gitignore`，保留虚拟环境、本地密钥、Claude 本地设置和编辑器噪音
 
