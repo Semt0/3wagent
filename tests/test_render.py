@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import sys
 import tempfile
 from pathlib import Path
@@ -12,9 +13,35 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
 
 from build_markdown import build_markdown, slugify_topic, write_markdown
+from render_report import update_viewer_index
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_TEMPLATE = ROOT / "templates" / "report.md"
+
+
+class TestUpdateViewerIndex:
+    def test_creates_viewer_index(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            output_root = Path(tmp) / "reports"
+            viewer_root = Path(tmp) / "viewer"
+            report_dir = output_root / "20260601-sample"
+            report_dir.mkdir(parents=True)
+            (report_dir / "report.md").write_text("# Sample", encoding="utf-8")
+            index_path = update_viewer_index(output_root, viewer_root)
+            assert index_path.exists()
+            data = json.loads(index_path.read_text(encoding="utf-8"))
+            assert len(data["reports"]) == 1
+            assert data["reports"][0]["id"] == "20260601-sample"
+            assert data["reports"][0]["content"] == "# Sample"
+
+    def test_ignores_dirs_without_report_md(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            output_root = Path(tmp) / "reports"
+            viewer_root = Path(tmp) / "viewer"
+            (output_root / "empty-dir").mkdir(parents=True)
+            index_path = update_viewer_index(output_root, viewer_root)
+            data = json.loads(index_path.read_text(encoding="utf-8"))
+            assert data["reports"] == []
 
 
 class TestSlugifyTopic:
