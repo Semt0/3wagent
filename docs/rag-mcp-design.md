@@ -89,6 +89,58 @@ Output:
 }
 ```
 
+Implemented as `source_registry_search` in `mcp_server/server.py`. It supports
+jurisdiction, domain, query and reliability filters, then ranks official and
+high-reliability sources ahead of weaker leads.
+
+### `source_document.search`
+
+Input:
+
+```json
+{
+  "query": "service fee foreign exchange current account payment",
+  "jurisdictions": ["CN"],
+  "domains": ["funds"],
+  "reliability": ["S", "A", "B"],
+  "limit": 10
+}
+```
+
+Output:
+
+```json
+[
+  {
+    "source_id": "cn-safe-test",
+    "title": "SAFE Current Account Foreign Exchange Guidance",
+    "authority": "State Administration of Foreign Exchange",
+    "jurisdiction": "CN",
+    "domains": ["funds"],
+    "reliability": "A",
+    "heading": "Current Account Payments",
+    "text_excerpt": "...service fee remittance documents...",
+    "score": 23.4
+  }
+]
+```
+
+Implemented as `source_document_search`. It searches the local SQLite FTS index
+at `sources/index.sqlite`, preserving metadata on every returned chunk.
+
+### `source_document.read`
+
+Input:
+
+```json
+{
+  "source_id": "cn-safe-test"
+}
+```
+
+Output returns the reassembled indexed text for that source, plus its metadata
+and chunk count. This is implemented as `source_document_read`.
+
 ### `official_site.fetch`
 
 Input:
@@ -218,12 +270,60 @@ Output:
 }
 ```
 
+## Dashboard Bridge
+
+The optional dashboard is not an analysis runtime. It is a local observer layer
+for runs and archived reports:
+
+- `tools/progress.py` writes `runs/<run_id>/status.json` and `progress.jsonl`.
+- `server/app.py` serves the static viewer and exposes a thin REST API for run
+  lists, progress events and report content.
+- `viewer/` polls the REST API and renders run progress, active subagents,
+  timelines and final Markdown previews.
+- Report links use `/api/reports/{report_id}/markdown` for raw Markdown, while
+  `/api/reports/{report_id}` remains JSON for the in-page preview.
+
 ## Non-Goals For Now
 
 - No persistent vector database until source volume justifies it.
-- No separate FastAPI or LangChain runtime for the MVP.
+- No separate FastAPI or LangChain analysis runtime for the MVP.
 - No automated legal conclusion without citation verification.
 - No C or D source promotion to final authority.
+
+## Local Indexing
+
+The first implementation uses SQLite plus FTS5 instead of a vector database.
+This keeps the project local and lightweight while making retrieval repeatable.
+
+Build or update the index from a saved snapshot:
+
+```bash
+uv run python tools/ingest_sources.py \
+  --source-id cn-foreign-exchange-regulations \
+  --text-file sources/snapshots/cn/cn-foreign-exchange-regulations.md
+```
+
+Index every source that already has a saved snapshot:
+
+```bash
+uv run python tools/ingest_sources.py --all-snapshots
+```
+
+Bootstrap the index from registry metadata only:
+
+```bash
+uv run python tools/ingest_sources.py --source-id cn-safe-policy-regulations --metadata-only
+```
+
+Fetch a source URL into `sources/snapshots/` and index it:
+
+```bash
+uv run python tools/ingest_sources.py --source-id hk-ird-dipn --fetch
+```
+
+Use `--fetch` deliberately: many official legal sites have access controls,
+dynamic rendering or anti-bot limits, so saved snapshots remain preferable for
+auditable research.
 
 ## Implementation Order
 
