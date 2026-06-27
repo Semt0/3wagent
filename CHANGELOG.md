@@ -98,6 +98,10 @@
 | 框架文档化 | 梳理技术栈、路由规则和协作方式 |
 | Agent-native 重构 | 转向 Claude Code rules / skills / subagents |
 | 报告归档 | 固定生成 Markdown 和 PDF 报告文件 |
+| 输入输出细化 | 固定 5 项核心输出，现行法规清单成为优先级 |
+| 配置分离 | 抽取 config/ 唯一来源，按关注点重组 agents/skills |
+| 轻量 RAG / MCP | 增加 SQLite FTS 本地索引和 MCP 检索工具 |
+| 本地 Dashboard | 增加静态前端、薄 FastAPI bridge 和运行进度日志 |
 
 ---
 
@@ -167,3 +171,76 @@
 - config/ 是所有策略数据的唯一来源，改一处生效全局
 - agents/skills 按关注点组织，改检索逻辑只看 retrieval/ 目录
 - CLAUDE.md 只做顶层编排，具体规则通过引用指向 config/ 和 principles.md
+
+---
+
+## 阶段八：轻量本地 RAG 与 MCP 检索工具
+
+**时间**：2026-06-27
+
+在不引入 LangChain / LangGraph runtime、向量数据库或独立后台服务的前提下，为 `sources/` registry 增加第一版可复用检索工程层。
+
+核心变化：
+
+- **新增 SQLite FTS 本地索引**：`mcp_server/rag_index.py` 负责建库、chunk、全文检索、source 重组读取和 metadata-first 过滤
+- **保留政策研究 metadata**：每个检索 chunk 都携带 `source_id`、法域、领域、子领域、来源等级、authority、URL、status 和日期字段
+- **增强 registry 检索**：`source_registry_search` 支持 `query`、`reliability` 和 `limit`，并按来源等级与关键词匹配排序
+- **新增 MCP RAG 工具**：
+  - `source_document_search` — 检索 `sources/index.sqlite` 中的来源快照 chunk
+  - `source_document_read` — 按 `source_id` 读取完整已索引来源文本
+- **新增 ingestion CLI**：`tools/ingest_sources.py` 支持从本地 snapshot、单个文本文件、registry metadata 或显式 `--fetch` 构建索引
+- **补充测试**：新增 `tests/test_rag_index.py`，并扩展 `tests/test_mcp_server.py` 覆盖 registry query、RAG search 和 RAG read
+- **同步设计文档**：`docs/rag-mcp-design.md` 增加已实现工具、SQLite FTS 索引路径和建索引命令
+- **同步 README**：中英文 README 增加本地 RAG 索引、MCP 工具、目录结构和使用命令
+
+设计边界：
+
+- 这是轻量、可选的本地 RAG 层，不改变 agent-native 主架构
+- 检索仍然先按法域、领域、来源等级过滤，再做关键词/全文召回
+- RAG 只负责证据检索和出处定位，不直接生成法律、税务或合规结论
+- 暂不引入持久向量库；等来源规模和语义召回需求稳定后，再考虑 sqlite-vec、LanceDB 或 pgvector
+
+验证结果：
+
+```text
+uv run pytest
+76 passed, 1 warning
+
+uv run ruff check mcp_server/rag_index.py mcp_server/server.py tools/ingest_sources.py tests/test_rag_index.py tests/test_mcp_server.py docs/rag-mcp-design.md
+All checks passed!
+```
+
+---
+
+## 阶段九：本地 Dashboard 前端与服务桥接
+
+**时间**：2026-06-27
+
+在保持 agent-native 分析架构不变的前提下，增加一个可选本地 dashboard，用于观察 Claude Code / Codex 运行进度和归档报告。
+
+核心变化：
+
+- **新增静态前端**：`viewer/index.html`、`viewer/app.js`、`viewer/style.css` 展示运行列表、步骤状态、正在运行的子代理、事件 timeline 和最终报告预览
+- **新增薄 FastAPI bridge**：`server/app.py` 只读取 `runs/` 和 `reports/` 本地文件，并复用 MCP 报告列表工具；不承载政策分析逻辑
+- **新增进度日志 CLI**：`tools/progress.py` 写入 `runs/<run_id>/status.json` 和 `progress.jsonl`，供 dashboard 轮询
+- **新增 dashboard 启动器**：`tools/open_dashboard.py` 自动启动 `uvicorn server.app:app` 并打开浏览器
+- **补充本地 API**：
+  - `GET /api/runs`
+  - `GET /api/runs/{run_id}/progress`
+  - `GET /api/reports`
+  - `GET /api/reports/{report_id}`
+  - `GET /api/reports/{report_id}/markdown`
+  - `DELETE /api/reports/{report_id}`
+- **修正小问题**：
+  - 修复 dashboard 启动器中 `host` / `port` 未定义的问题
+  - 将“查看 Markdown”链接改为打开 raw Markdown，而不是 JSON API
+  - 对 report id 加本地路径校验，降低误读/误删风险
+  - 修正前端键盘切换时只高亮、不刷新详情的问题
+  - 让 `server` extra 包含 dashboard backend 实际依赖的 MCP / PyYAML
+- **补充测试**：新增 dashboard 启动器、progress 日志和 server API 测试；扩展 MCP 报告读取的非法 id 测试
+
+设计边界：
+
+- dashboard 是本地观察层，不改变 agent / subagent / skill 的分析编排
+- FastAPI 只做静态文件服务和本地文件读取，不引入 LangChain / LangGraph runtime
+- 删除接口是硬删除，仅面向本地开发使用

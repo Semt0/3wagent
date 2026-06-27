@@ -70,7 +70,7 @@ Agent 会输出三项结果：
 - 哪些资料可以作为依据，哪些资料只能作为线索
 - 最终如何稳定输出法规索引和风险提示
 
-所以项目暂时不自建 FastAPI / LangChain / LangGraph runtime，而是直接使用 Claude Code 的 rules、skills 和 subagents。通用 coding agent 已经具备工具调用、文件读写、检索和任务拆分能力；这个仓库只负责提供稳定的领域规则和执行边界。
+所以项目暂时不自建 FastAPI / LangChain / LangGraph 分析 runtime，而是直接使用 Claude Code 的 rules、skills 和 subagents。通用 coding agent 已经具备工具调用、文件读写、检索和任务拆分能力；这个仓库只负责提供稳定的领域规则和执行边界。当前新增的 FastAPI dashboard 只是很薄的本地进度和报告读取层，不承载政策分析逻辑。
 
 ---
 
@@ -105,10 +105,12 @@ Agent 会输出三项结果：
 | 文档解析 | 内置 `liteparse` skill，优先处理 PDF / Word / 扫描件 |
 | Subagent 分析 | 资金合规（外汇管理 vs 银行合规/AML/制裁）、税务、民商法规分别由专项 subagent 处理 |
 | 政策检索 | 先查 `sources/`，再按 CN / US / HK / SG 和 funds / tax / commercial 过滤来源 |
+| 本地 RAG 索引 | 可选使用 `sources/index.sqlite` 的 SQLite FTS 索引，按法域、领域和来源等级检索已保存来源快照 |
 | 类案检索 | 从中国裁判文书网、HKLII、Singapore Courts、CourtListener 等官方案例数据库检索类似判决 |
 | 法规时效性校验 | 检查法规是否现行有效、被替代或废止；追溯单层级修订关系 |
 | 引用校验 | 检查结论、案例引用和修订关系是否由正确法域和正确来源支持 |
 | 报告归档 | 同步生成 `report.md` 和 `report.pdf` |
+| 本地仪表盘 | 可选静态前端 + 薄 FastAPI bridge，用于查看运行进度、子代理状态和最终报告 |
 
 ---
 
@@ -121,7 +123,7 @@ Agent 会输出三项结果：
 ```text
 1. Lead Policy Agent 识别法域、主体、交易和付款性质
 2. 判断问题分类：纯粹外汇管理 / 纯粹银行合规与AML / 纯粹税务 / 跨领域
-3. 召唤 rag-retriever 先查 `sources/`，检索官方来源和类案数据库
+3. 召唤 rag-retriever 先查 `sources/` 和可选本地 RAG 索引，检索官方来源和类案数据库
 4. 调用 regulatory-validity-verifier 校验法规时效、版本适用性和单层级修订关系
 5. 按需调用专项 subagents
 6. 调用 citation-verifier 校验依据、案例引用和修订关系
@@ -142,7 +144,7 @@ Agent 会输出三项结果：
 2. Lead Policy Agent 提取交易事实
    └─ 主体、金额、币种、付款路径、合同类型、收入性质
 
-3. rag-retriever 先查 `sources/` registry，再检索来源
+3. rag-retriever 先查 `sources/` registry 和可选本地 RAG 索引，再检索来源
    └─ 官方法规和监管指引优先
    └─ 专业文章和公众号只作为线索
 
@@ -204,7 +206,7 @@ Lead Policy Agent 识别问题、法域、主领域和辅助领域
   ↓
 Lead Policy Agent 形成任务包并决定使用哪些 subagents
   ↓
-rag-retriever 先查 `sources/` registry，再检索官方政策、法规和辅助资料
+rag-retriever 先查 `sources/` registry 和可选本地 RAG 索引，再检索官方政策、法规和辅助资料
   ↓
 regulatory-validity-verifier 校验法规时效、版本和适用时间点
   ↓
@@ -303,7 +305,16 @@ config/                         策略数据唯一来源
   output-contract.yaml          必需和辅助输出节段定义
 
 docs/
+  architecture.md               架构设计说明（设计取舍与人机分工）
   rag-mcp-design.md             RAG / MCP 工具设计草案
+  course-report/                课程书面报告（LaTeX 源码 + 编译 PDF）
+
+mcp_server/
+  server.py                     reports、registry、routing 和本地 RAG 检索的 MCP 桥接层
+  rag_index.py                  SQLite FTS 来源快照索引
+
+server/
+  app.py                        本地 dashboard 的薄 FastAPI 后端和报告 API
 
 sources/
   README.md                     来源 registry 字段、等级说明和子领域分类
@@ -311,12 +322,17 @@ sources/
   us.yaml                       美国官方来源索引（含 CourtListener）
   hk.yaml                       香港官方来源索引（含 HKLII）
   sg.yaml                       新加坡官方来源索引（含 Singapore Courts）
+  snapshots/                    可选保存的来源快照，用于本地索引
+  index.sqlite                  可选生成的本地 RAG 索引
 
 templates/
   report.md                     归档报告模板
   retrieval-task.md             rag-retriever 任务包模板
 
 tools/
+  open_dashboard.py             启动本地 dashboard 后端并打开浏览器
+  progress.py                   向 runs/ 写入运行状态和进度事件
+  ingest_sources.py             构建 / 更新本地 SQLite RAG 索引
   render_report.py              薄 CLI 编排层
   build_markdown.py             Markdown 生成工具
   convert_pdf.py                PDF 转换（pandoc / weasyprint / reportlab）
@@ -325,14 +341,30 @@ tools/
 
 tests/
   test_config.py                配置 YAML 测试
+  test_mcp_server.py            MCP 工具测试
+  test_open_dashboard.py        dashboard 启动器测试
+  test_progress.py              运行进度日志测试
+  test_rag_index.py             本地 RAG 索引测试
   test_registry.py              来源注册表测试
   test_render.py                Markdown 生成和 PDF 回退测试
+  test_server.py                dashboard API 测试
 
 reports/
   .gitkeep                      报告生成目录占位
   YYYYMMDD-topic/
     report.md                   详细 Markdown 报告，本地产物
     report.pdf                  Markdown 转换后的 PDF，本地产物
+
+runs/
+  .gitkeep                      运行进度目录占位
+  YYYYMMDD-topic/
+    status.json                 dashboard 读取的当前运行状态
+    progress.jsonl              分步骤运行事件日志
+
+viewer/
+  index.html                    静态 dashboard 页面
+  app.js                        dashboard 轮询和渲染逻辑
+  style.css                     dashboard 样式
 
 CHANGELOG.md                    项目演进记录
 README.md
@@ -354,6 +386,18 @@ source .venv/bin/activate
 uv sync --extra dev
 ```
 
+如果要使用本地 MCP bridge，安装 MCP extra：
+
+```bash
+uv sync --extra dev --extra mcp
+```
+
+如果要使用本地 dashboard，安装 server extra：
+
+```bash
+uv sync --extra dev --extra server
+```
+
 `liteparse` 已作为内置 skill 放在 `.claude/skills/parsing/liteparse.md`。使用时仍需全局安装 LiteParse CLI（Node 18+）：
 
 ```bash
@@ -372,15 +416,55 @@ uv run ruff check .
 uv run python tools/render_report.py --title "示例政策报告" --topic sample --overwrite
 ```
 
+从已保存的来源快照构建可选本地 RAG 索引：
+
+```bash
+uv run python tools/ingest_sources.py --all-snapshots
+```
+
+也可以先用 registry metadata 引导单个来源进入索引：
+
+```bash
+uv run python tools/ingest_sources.py --source-id cn-safe-policy-regulations --metadata-only
+```
+
+启动本地 dashboard：
+
+```bash
+uv run python tools/open_dashboard.py
+```
+
+dashboard 会读取 `runs/*/status.json`、`runs/*/progress.jsonl` 和归档报告，并暴露这些本地 API：
+
+```text
+GET /api/runs
+GET /api/runs/{run_id}/progress
+GET /api/reports
+GET /api/reports/{report_id}
+GET /api/reports/{report_id}/markdown
+DELETE /api/reports/{report_id}
+```
+
+MCP bridge 当前暴露这些工具：
+
+```text
+source_registry_search
+source_document_search
+source_document_read
+routing_classify
+report_artifact_list
+report_artifact_read
+```
+
 ---
 
 ## Discussion
 
-当前版本优先验证 agent-native workflow，不急于产品化。后续只有在以下需求稳定出现时，才考虑加入更重的工程层：
+当前版本已经包含一个轻量、可选的本地 RAG 层：结构化来源 registry + SQLite FTS 来源快照索引。后续只有在以下需求稳定出现时，才考虑加入更重的工程层：
 
-- 需要长期维护本地 RAG 索引
+- 需要向量数据库或混合语义检索
 - 需要多人共享同一套政策资料库
 - 需要 Web UI、权限、文件管理或审计日志
-- 需要把高频流程封装为 MCP 工具或后台服务
+- 需要把高频流程进一步服务化为后台 runtime
 
 在此之前，3wagent 的核心仍然是：用尽量少的项目代码，把 Claude Code / Codex 的通用 agent 能力约束在一个清晰、可复用、可审计的跨境政策研究流程里。

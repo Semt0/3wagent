@@ -13,6 +13,13 @@ __pycache__/
 reports/*
 !reports/.gitkeep
 
+# Run progress logs
+runs/*
+!runs/.gitkeep
+
+# Generated viewer index
+viewer/reports.json
+
 # Editor / OS
 .DS_Store
 .idea/
