@@ -24,3 +24,6 @@ viewer/reports.json
 .DS_Store
 .idea/
 .vscode/
+
+# workspace
+workspace/
