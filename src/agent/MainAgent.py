@@ -15,7 +15,7 @@ def init_agent_service(model_name : Optional[str] = "finance-27b"):
     bot = Assistant(
         llm = llm_config,
         name = "3wagent",
-        description = "3wagetn", 
+        description = "3wagent: a policy research agent", 
         function_list=tools,
         system_message = system_prompt
     )
