@@ -127,7 +127,17 @@ body {
 }
 
 .gradio-container {
-  max-width: 1280px !important;
+  max-width: 1240px !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  padding-left: 24px !important;
+  padding-right: 24px !important;
+}
+
+.gradio-container .main,
+.gradio-container .wrap {
+  margin-left: auto !important;
+  margin-right: auto !important;
 }
 
 /* ── Header theme toggle ── */
