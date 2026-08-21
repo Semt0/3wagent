@@ -16,6 +16,16 @@ from qwen_agent.gui import WebUI
 from qwen_agent.llm.schema import Message
 
 THEME_CSS_PATH = os.path.join(os.path.dirname(__file__), 'assets', 'webui_theme.css')
+LOGO_PATH = os.path.join(os.path.dirname(__file__), 'assets', 'logo.png')
+LOGO_SMALL_PATH = os.path.join(os.path.dirname(__file__), 'assets', 'logo_small.png')
+
+
+def _logo_data_uri() -> str:
+    """Inline the 128px logo as a data URI so gr.HTML can use it without a file route."""
+    import base64
+
+    with open(LOGO_SMALL_PATH, 'rb') as f:
+        return 'data:image/png;base64,' + base64.b64encode(f.read()).decode()
 
 
 def _load_theme_css() -> str:
@@ -83,14 +93,14 @@ class ThemedWebUI(WebUI):
 
         header_html = """
 <div style="display:flex;align-items:center;gap:12px;padding:4px 8px 14px;border-bottom:1px solid var(--w3-border);margin-bottom:14px">
-  <div style="width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,#0969da,#58a6ff);display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;font-size:15px">3w</div>
+  <img src="__LOGO__" alt="3wagent logo" style="width:34px;height:34px;border-radius:8px;display:block">
   <div>
     <div style="font-size:16px;font-weight:600;color:var(--w3-text);letter-spacing:-0.01em">3wagent</div>
     <div style="font-size:12px;color:var(--w3-text-2)">跨境政策合规分析助手</div>
   </div>
   <button id="w3-theme-toggle" type="button" title="切换明暗模式" aria-label="切换明暗模式">☾</button>
 </div>
-"""
+""".replace('__LOGO__', _logo_data_uri())
 
         # Mode resolution order (highest priority first):
         #   1. explicit ?__theme= URL param (Gradio native)
@@ -244,4 +254,5 @@ class ThemedWebUI(WebUI):
 
         demo.queue(default_concurrency_limit=concurrency_limit).launch(share=share,
                                                                        server_name=server_name,
-                                                                       server_port=server_port)
+                                                                       server_port=server_port,
+                                                                       favicon_path=LOGO_PATH)
