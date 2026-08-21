@@ -23,7 +23,13 @@ class MainAgent(FnCallAgent):
         llm: Optional[Union[Dict, BaseChatModel]] = None,
     ):
         tools = ['MarkDownReadTool', 'YamlReadTool']
-        super().__init__(llm=llm, function_list=tools, system_message=MAIN_AGENT_SYS_PROMPT)
+        super().__init__(
+            llm=llm,
+            function_list=tools,
+            system_message=MAIN_AGENT_SYS_PROMPT,
+            name='3wagent',
+            description='跨境政策合规分析助手：资金合规、税务、民商法多领域协同分析。',
+        )
 
     def _run(
         self,
