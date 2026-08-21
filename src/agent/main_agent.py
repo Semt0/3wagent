@@ -1,7 +1,6 @@
 from typing import Dict, Iterator, List, Literal, Optional, Union
 
 from qwen_agent.agents import FnCallAgent
-from src.agent.webui import ThemedWebUI
 from qwen_agent.llm import BaseChatModel
 from qwen_agent.llm.schema import ContentItem, Message
 
@@ -70,6 +69,9 @@ class MainAgent(FnCallAgent):
         yield from super()._run(messages=messages, lang=lang, **kwargs)
 
 def run_3wagent(model_name):
+    # Imported lazily so headless usage/tests don't require qwen-agent[gui]
+    from src.agent.webui import ThemedWebUI
+
     # Define Agent
     bot = MainAgent(llm = load_llm_config(model_name=model_name))
 
