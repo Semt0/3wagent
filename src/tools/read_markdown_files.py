@@ -4,7 +4,7 @@ import json5
 @register_tool('MarkDownReadTool')
 class MarkDownReadTool(BaseTool):
     name = "MarkDownReadTool"
-    description = "MarkDown File Reading Tool, input file absolute address, and return file content."
+    description = "MarkDown File Reading Tool, input markdown file absolute address, and return markdown file content."
     parameters = {
         "type" : "object",
         "properties" : {
