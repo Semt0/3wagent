@@ -92,24 +92,39 @@ class ThemedWebUI(WebUI):
 </div>
 """
 
-        # Follows system preference by default; the header toggle overrides
-        # and persists the choice. Gradio puts the `.dark` class on <body>.
+        # Mode resolution order (highest priority first):
+        #   1. explicit ?__theme= URL param (Gradio native)
+        #   2. stored manual choice (localStorage)
+        #   3. whatever Gradio decided from the system preference
+        # The click handler uses document-level delegation so it works
+        # regardless of when the header HTML finishes rendering.
         theme_toggle_js = """
 () => {
-  const apply = (mode) => {
-    document.body.classList.toggle('dark', mode === 'dark');
-    localStorage.setItem('w3-theme', mode);
+  const syncIcon = () => {
     const b = document.getElementById('w3-theme-toggle');
-    if (b) b.textContent = mode === 'dark' ? '☀︎' : '☾';
+    if (b) b.textContent = document.body.classList.contains('dark') ? '☀︎' : '☾';
   };
+  const apply = (mode, persist) => {
+    document.body.classList.toggle('dark', mode === 'dark');
+    if (persist) localStorage.setItem('w3-theme', mode);
+    syncIcon();
+  };
+  const urlTheme = new URLSearchParams(location.search).get('__theme');
   const stored = localStorage.getItem('w3-theme');
-  const sysDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-  apply(stored || (sysDark ? 'dark' : 'light'));
-  const btn = document.getElementById('w3-theme-toggle');
-  if (btn && !btn.dataset.bound) {
-    btn.dataset.bound = '1';
-    btn.addEventListener('click', () =>
-      apply(document.body.classList.contains('dark') ? 'light' : 'dark'));
+  if (urlTheme === 'dark' || urlTheme === 'light') {
+    apply(urlTheme, false);
+  } else if (stored === 'dark' || stored === 'light') {
+    apply(stored, false);
+  } else {
+    syncIcon();
+  }
+  if (!document.body.dataset.w3ThemeBound) {
+    document.body.dataset.w3ThemeBound = '1';
+    document.addEventListener('click', (e) => {
+      if (e.target && e.target.id === 'w3-theme-toggle') {
+        apply(document.body.classList.contains('dark') ? 'light' : 'dark', true);
+      }
+    });
   }
 }
 """
