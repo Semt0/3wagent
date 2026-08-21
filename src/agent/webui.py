@@ -61,34 +61,57 @@ class ThemedWebUI(WebUI):
                 'monospace',
             ],
         ).set(
-            body_background_fill='#0d1117',
+            body_background_fill='#f6f8fa',
             body_background_fill_dark='#0d1117',
-            body_text_color='#e6edf3',
+            body_text_color='#1f2328',
             body_text_color_dark='#e6edf3',
-            block_background_fill='#161b22',
+            block_background_fill='#ffffff',
             block_background_fill_dark='#161b22',
-            block_border_color='#30363d',
+            block_border_color='#d0d7de',
             block_border_color_dark='#30363d',
-            block_label_text_color='#9198a1',
+            block_label_text_color='#59636e',
             block_label_text_color_dark='#9198a1',
-            input_background_fill='#1c2330',
+            input_background_fill='#ffffff',
             input_background_fill_dark='#1c2330',
-            button_primary_background_fill='#2f81f7',
+            button_primary_background_fill='#0969da',
             button_primary_background_fill_dark='#2f81f7',
-            button_primary_background_fill_hover='#3b8cf5',
+            button_primary_background_fill_hover='#0550ae',
             button_primary_background_fill_hover_dark='#3b8cf5',
             button_primary_text_color='#ffffff',
             button_primary_text_color_dark='#ffffff',
         )
 
         header_html = """
-<div style="display:flex;align-items:center;gap:12px;padding:4px 8px 14px;border-bottom:1px solid #30363d;margin-bottom:14px">
-  <div style="width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,#2f81f7,#58a6ff);display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;font-size:15px">3w</div>
+<div style="display:flex;align-items:center;gap:12px;padding:4px 8px 14px;border-bottom:1px solid var(--w3-border);margin-bottom:14px">
+  <div style="width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,#0969da,#58a6ff);display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;font-size:15px">3w</div>
   <div>
-    <div style="font-size:16px;font-weight:600;color:#e6edf3;letter-spacing:-0.01em">3wagent</div>
-    <div style="font-size:12px;color:#9198a1">跨境政策合规分析助手</div>
+    <div style="font-size:16px;font-weight:600;color:var(--w3-text);letter-spacing:-0.01em">3wagent</div>
+    <div style="font-size:12px;color:var(--w3-text-2)">跨境政策合规分析助手</div>
   </div>
+  <button id="w3-theme-toggle" type="button" title="切换明暗模式" aria-label="切换明暗模式">☾</button>
 </div>
+"""
+
+        # Follows system preference by default; the header toggle overrides
+        # and persists the choice. Gradio puts the `.dark` class on <body>.
+        theme_toggle_js = """
+() => {
+  const apply = (mode) => {
+    document.body.classList.toggle('dark', mode === 'dark');
+    localStorage.setItem('w3-theme', mode);
+    const b = document.getElementById('w3-theme-toggle');
+    if (b) b.textContent = mode === 'dark' ? '☀︎' : '☾';
+  };
+  const stored = localStorage.getItem('w3-theme');
+  const sysDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  apply(stored || (sysDark ? 'dark' : 'light'));
+  const btn = document.getElementById('w3-theme-toggle');
+  if (btn && !btn.dataset.bound) {
+    btn.dataset.bound = '1';
+    btn.addEventListener('click', () =>
+      apply(document.body.classList.contains('dark') ? 'light' : 'dark'));
+  }
+}
 """
 
         with gr.Blocks(
@@ -202,6 +225,7 @@ class ThemedWebUI(WebUI):
                     input_promise.then(self.flushed, None, [input])
 
             demo.load(None)
+            demo.load(None, js=theme_toggle_js)
 
         demo.queue(default_concurrency_limit=concurrency_limit).launch(share=share,
                                                                        server_name=server_name,

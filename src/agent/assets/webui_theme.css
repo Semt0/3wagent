@@ -1,24 +1,31 @@
 /* ══════════════════════════════════════════════════════════════
-   3wagent Gradio WebUI theme — GitHub-Dark inspired, clean & calm
+   3wagent Gradio WebUI theme — light + dark (follows system,
+   manual toggle in the header, persisted to localStorage).
    Layered after qwen_agent's assets/appBot.css.
 
    Strategy: restyle through Gradio 5 CSS variables (stable API)
-   instead of hashed svelte-* class selectors.
+   instead of hashed svelte-* class selectors. Light values live
+   under :root, dark overrides under .dark (Gradio toggles this
+   class on <body>).
    ══════════════════════════════════════════════════════════════ */
 
-:root, .dark {
-  /* palette */
-  --w3-bg: #0d1117;
-  --w3-panel: #161b22;
-  --w3-panel-alt: #1c2330;
-  --w3-border: #30363d;
-  --w3-text: #e6edf3;
-  --w3-text-2: #9198a1;
-  --w3-accent: #58a6ff;
-  --w3-accent-strong: #2f81f7;
-  --w3-green: #3fb950;
+/* ── Light (default) ── */
+:root {
+  --w3-bg: #f6f8fa;
+  --w3-panel: #ffffff;
+  --w3-panel-alt: #f6f8fa;
+  --w3-border: #d0d7de;
+  --w3-text: #1f2328;
+  --w3-text-2: #59636e;
+  --w3-accent: #0969da;
+  --w3-accent-strong: #0550ae;
+  --w3-accent-soft: rgba(9, 105, 218, 0.08);
+  --w3-user-bubble: rgba(9, 105, 218, 0.08);
+  --w3-user-border: rgba(9, 105, 218, 0.3);
+  --w3-code-inline: rgba(9, 105, 218, 0.9);
+  --w3-code-inline-bg: rgba(175, 184, 193, 0.2);
+  --w3-green: #1a7f37;
 
-  /* gradio variables */
   --body-background-fill: var(--w3-bg);
   --body-text-color: var(--w3-text);
   --body-text-color-subdued: var(--w3-text-2);
@@ -30,7 +37,6 @@
   --block-shadow: none;
   --block-title-text-color: var(--w3-text);
 
-  /* the floating "Chatbot" / section label chip */
   --block-label-background-fill: transparent;
   --block-label-text-color: var(--w3-text-2);
   --block-label-border-color: transparent;
@@ -38,19 +44,19 @@
   --block-label-shadow: none;
   --block-label-radius: 6px;
 
-  --input-background-fill: var(--w3-panel-alt);
+  --input-background-fill: var(--w3-panel);
   --input-border-color: var(--w3-border);
-  --input-border-color-focus: var(--w3-accent-strong);
+  --input-border-color-focus: var(--w3-accent);
   --input-placeholder-color: var(--w3-text-2);
   --input-radius: 8px;
   --input-shadow: none;
 
-  --button-primary-background-fill: var(--w3-accent-strong);
-  --button-primary-background-fill-hover: #3b8cf5;
+  --button-primary-background-fill: var(--w3-accent);
+  --button-primary-background-fill-hover: var(--w3-accent-strong);
   --button-primary-text-color: #ffffff;
   --button-primary-border-color: transparent;
   --button-secondary-background-fill: var(--w3-panel-alt);
-  --button-secondary-background-fill-hover: #262f3d;
+  --button-secondary-background-fill-hover: #eaeef2;
   --button-secondary-text-color: var(--w3-text);
   --button-secondary-border-color: var(--w3-border);
   --button-border-width: 1px;
@@ -58,40 +64,60 @@
   --button-shadow: none;
   --button-shadow-hover: none;
 
-  /* checkbox / radio pills (plugin list) */
-  --checkbox-background-color: var(--w3-panel-alt);
-  --checkbox-background-color-selected: var(--w3-panel-alt);
-  --checkbox-background-color-focus: var(--w3-panel-alt);
+  --checkbox-background-color: var(--w3-panel);
+  --checkbox-background-color-selected: var(--w3-panel);
+  --checkbox-background-color-focus: var(--w3-panel);
   --checkbox-border-color: var(--w3-border);
-  --checkbox-border-color-selected: var(--w3-accent-strong);
-  --checkbox-border-color-focus: var(--w3-accent-strong);
+  --checkbox-border-color-selected: var(--w3-accent);
+  --checkbox-border-color-focus: var(--w3-accent);
   --checkbox-label-background-fill: transparent;
   --checkbox-label-background-fill-selected: transparent;
   --checkbox-label-background-fill-hover: var(--w3-panel-alt);
   --checkbox-label-border-color: var(--w3-border);
-  --checkbox-label-border-color-hover: var(--w3-accent-strong);
+  --checkbox-label-border-color-hover: var(--w3-accent);
   --checkbox-label-text-color: var(--w3-text-2);
   --checkbox-label-text-color-selected: var(--w3-text);
-  --checkbox-check: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='%233fb950' d='M6.2 12.2 2.4 8.4l1.1-1.1 2.7 2.7 6-6 1.1 1.1z'/%3E%3C/svg%3E");
+  --checkbox-check: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='%231a7f37' d='M6.2 12.2 2.4 8.4l1.1-1.1 2.7 2.7 6-6 1.1 1.1z'/%3E%3C/svg%3E");
 
   --border-color-primary: var(--w3-border);
   --border-color-accent: var(--w3-border);
   --border-color-accent-subdued: var(--w3-border);
 
   --link-text-color: var(--w3-accent);
-  --link-text-color-hover: #79b8ff;
+  --link-text-color-hover: var(--w3-accent-strong);
 
-  --code-comment-color: #768390;
-  --stat-background-fill: var(--w3-accent-strong);
+  --code-comment-color: #59636e;
+  --stat-background-fill: var(--w3-accent);
 
   --shadow-drop: none;
-  --shadow-drop-lg: 0 8px 24px rgba(1, 4, 9, 0.5);
+  --shadow-drop-lg: 0 8px 24px rgba(140, 149, 159, 0.2);
   --shadow-spread: 0px;
 
-  --loader-color: var(--w3-accent-strong);
+  --loader-color: var(--w3-accent);
+  --color-accent: var(--w3-accent);
+  --color-accent-soft: var(--w3-accent-soft);
+}
 
-  --color-accent: var(--w3-accent-strong);
-  --color-accent-soft: var(--w3-panel-alt);
+/* ── Dark overrides ── */
+.dark {
+  --w3-bg: #0d1117;
+  --w3-panel: #161b22;
+  --w3-panel-alt: #1c2330;
+  --w3-border: #30363d;
+  --w3-text: #e6edf3;
+  --w3-text-2: #9198a1;
+  --w3-accent: #58a6ff;
+  --w3-accent-strong: #2f81f7;
+  --w3-accent-soft: rgba(47, 129, 247, 0.14);
+  --w3-user-bubble: rgba(47, 129, 247, 0.16);
+  --w3-user-border: rgba(88, 166, 255, 0.35);
+  --w3-code-inline: #79c0ff;
+  --w3-code-inline-bg: rgba(110, 118, 129, 0.18);
+  --w3-green: #3fb950;
+
+  --checkbox-check: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='%233fb950' d='M6.2 12.2 2.4 8.4l1.1-1.1 2.7 2.7 6-6 1.1 1.1z'/%3E%3C/svg%3E");
+
+  --shadow-drop-lg: 0 8px 24px rgba(1, 4, 9, 0.5);
 }
 
 body {
@@ -104,20 +130,37 @@ body {
   max-width: 1280px !important;
 }
 
-/* ── Chatbot column ── */
+/* ── Header theme toggle ── */
+#w3-theme-toggle {
+  margin-left: auto;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid var(--w3-border);
+  background: var(--w3-panel);
+  color: var(--w3-text-2);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  transition: all 150ms ease;
+}
+#w3-theme-toggle:hover {
+  color: var(--w3-accent);
+  border-color: var(--w3-accent);
+}
+
+/* ── Chat bubbles ── */
 .gradio-container .message {
   border-radius: 10px !important;
   line-height: 1.75;
 }
 
-/* user bubble: subtle blue tint */
 .gradio-container .message.user {
-  background: rgba(47, 129, 247, 0.16) !important;
-  border: 1px solid rgba(88, 166, 255, 0.35) !important;
+  background: var(--w3-user-bubble) !important;
+  border: 1px solid var(--w3-user-border) !important;
   color: var(--w3-text) !important;
 }
 
-/* bot bubble: flat panel */
 .gradio-container .message.bot {
   background: var(--w3-panel-alt) !important;
   border: 1px solid var(--w3-border) !important;
@@ -135,14 +178,11 @@ body {
 }
 .markdown-body summary:hover {
   color: var(--w3-accent) !important;
-  border-color: var(--w3-accent-strong);
+  border-color: var(--w3-accent);
 }
 
-/* avatars: simple circle, no glow */
-.bot_avatar,
-.bot_avatar img {
-  border-radius: 50%;
-}
+/* avatars */
+.bot_avatar, .bot_avatar img { border-radius: 50%; }
 
 .bot_cover {
   background: var(--w3-panel-alt);
@@ -155,19 +195,13 @@ body {
   letter-spacing: -0.01em;
 }
 
-/* ── markdown polish ── */
+/* ── markdown polish (mode-aware via vars) ── */
 .markdown-body code {
-  background: rgba(110, 118, 129, 0.18);
+  background: var(--w3-code-inline-bg);
   border-radius: 5px;
   padding: 1px 6px;
-  color: #79c0ff;
+  color: var(--w3-code-inline);
 }
-.markdown-body pre {
-  background: #010409 !important;
-  border: 1px solid var(--w3-border);
-  border-radius: 8px;
-}
-.markdown-body pre code { background: none; color: #c9d1d9; }
 .markdown-body table { border-collapse: collapse; }
 .markdown-body th, .markdown-body td {
   border: 1px solid var(--w3-border) !important;
@@ -182,35 +216,42 @@ body {
 }
 .markdown-body a { color: var(--w3-accent); }
 
-/* codehilite: GitHub-dark-ish */
-.codehilite { background: #010409 !important; border-radius: 8px; }
-.codehilite pre { color: #c9d1d9; }
-.codehilite .hll { background-color: rgba(88, 166, 255, 0.1); }
-.codehilite .c, .codehilite .ch, .codehilite .cm, .codehilite .cp,
-.codehilite .cpf, .codehilite .c1, .codehilite .cs { color: #768390; font-style: italic; }
-.codehilite .k, .codehilite .kc, .codehilite .kd, .codehilite .kn,
-.codehilite .kp, .codehilite .kr { color: #ff7b72; }
-.codehilite .kt { color: #79c0ff; }
-.codehilite .s, .codehilite .sa, .codehilite .sb, .codehilite .sc, .codehilite .dl,
-.codehilite .sd, .codehilite .s2, .codehilite .se, .codehilite .sh,
-.codehilite .si, .codehilite .sx, .codehilite .sr, .codehilite .s1,
-.codehilite .ss { color: #a5d6ff; }
-.codehilite .m, .codehilite .mb, .codehilite .mf, .codehilite .mh,
-.codehilite .mi, .codehilite .mo, .codehilite .il { color: #79c0ff; }
-.codehilite .na { color: #79c0ff; }
-.codehilite .nb, .codehilite .bp { color: #79c0ff; }
-.codehilite .nc, .codehilite .nn { color: #ffa657; font-weight: bold; }
-.codehilite .nf, .codehilite .fm { color: #d2a8ff; }
-.codehilite .nv, .codehilite .vc, .codehilite .vg, .codehilite .vi,
-.codehilite .vm { color: #79c0ff; }
-.codehilite .ow, .codehilite .o { color: #ff7b72; }
-.codehilite .err { color: #f85149; border: none; }
+/* codehilite: keep vendor's light scheme; dark overrides below */
+.dark .codehilite { background: #010409 !important; border-radius: 8px; }
+.dark .codehilite pre { color: #c9d1d9; }
+.dark .codehilite .hll { background-color: rgba(88, 166, 255, 0.1); }
+.dark .codehilite .c, .dark .codehilite .ch, .dark .codehilite .cm, .dark .codehilite .cp,
+.dark .codehilite .cpf, .dark .codehilite .c1, .dark .codehilite .cs { color: #768390; font-style: italic; }
+.dark .codehilite .k, .dark .codehilite .kc, .dark .codehilite .kd, .dark .codehilite .kn,
+.dark .codehilite .kp, .dark .codehilite .kr { color: #ff7b72; }
+.dark .codehilite .kt { color: #79c0ff; }
+.dark .codehilite .s, .dark .codehilite .sa, .dark .codehilite .sb, .dark .codehilite .sc,
+.dark .codehilite .dl, .dark .codehilite .sd, .dark .codehilite .s2, .dark .codehilite .se,
+.dark .codehilite .sh, .dark .codehilite .si, .dark .codehilite .sx, .dark .codehilite .sr,
+.dark .codehilite .s1, .dark .codehilite .ss { color: #a5d6ff; }
+.dark .codehilite .m, .dark .codehilite .mb, .dark .codehilite .mf, .dark .codehilite .mh,
+.dark .codehilite .mi, .dark .codehilite .mo, .dark .codehilite .il { color: #79c0ff; }
+.dark .codehilite .na { color: #79c0ff; }
+.dark .codehilite .nb, .dark .codehilite .bp { color: #79c0ff; }
+.dark .codehilite .nc, .dark .codehilite .nn { color: #ffa657; font-weight: bold; }
+.dark .codehilite .nf, .dark .codehilite .fm { color: #d2a8ff; }
+.dark .codehilite .nv, .dark .codehilite .vc, .dark .codehilite .vg, .dark .codehilite .vi,
+.dark .codehilite .vm { color: #79c0ff; }
+.dark .codehilite .ow, .dark .codehilite .o { color: #ff7b72; }
+.dark .codehilite .err { color: #f85149; border: none; }
+
+.dark .markdown-body pre {
+  background: #010409 !important;
+  border: 1px solid var(--w3-border);
+  border-radius: 8px;
+}
+.dark .markdown-body pre code { background: none; color: #c9d1d9; }
 
 /* ── scrollbars ── */
 ::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #30363d; border-radius: 4px; }
-::-webkit-scrollbar-thumb:hover { background: #484f58; }
+::-webkit-scrollbar-thumb { background: var(--w3-border); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--w3-text-2); }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
