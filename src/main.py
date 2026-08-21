@@ -18,7 +18,7 @@ def main():
         logger.setLevel('DEBUG')
         logger.addHandler(SetUpHandler(args.model))
 
-    run_3wagent()
+    run_3wagent(args.model)
 
 if __name__ == "__main__":
     main()
