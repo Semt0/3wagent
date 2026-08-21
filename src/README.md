@@ -16,6 +16,7 @@ src/
 ├── pyproject.toml          # 独立包 3wagent-refactor，依赖 qwen-agent[gui,python-executor]
 ├── environment.yml         # 等价的 conda 环境定义（python 3.12）
 ├── agent/
+│   ├── attachments.py      # 将上传的文本附件安全地内联到模型上下文
 │   └── main_agent.py       # MainAgent(FnCallAgent) 子类 + run_3wagent() 启动函数
 ├── config/
 │   ├── llm.py              # LLM 连接配置（BASIC_CONFIG 模板 + load_llm_config）
@@ -75,7 +76,7 @@ python -m src.main -d              # DEBUG 模式，日志写入 workspace/logs/
 
 ## 路线图
 
-`MainAgent._run()` 目前是脚手架：检测附件后（注入文件内容还是 TODO）直接走 FnCallAgent 默认流程。注释中规划的 7 步子代理流水线尚待落地：
+`MainAgent._run()` 目前会将上传的 Markdown、纯文本和 YAML 文件内联到模型上下文；如果用户未输入提示词且没有附件成功解析，则直接返回格式提示，不进入 FnCallAgent 工具循环。注释中规划的其余子代理流水线尚待落地：
 
 1. 附件解析（parsing）
 2. Routing（策略路由）

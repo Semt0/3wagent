@@ -2,8 +2,9 @@ from typing import Dict, Iterator, List, Literal, Optional, Union
 
 from qwen_agent.agents import FnCallAgent
 from qwen_agent.llm import BaseChatModel
-from qwen_agent.llm.schema import ContentItem, Message
+from qwen_agent.llm.schema import Message
 
+from src.agent.attachments import inline_uploaded_files
 from src.config.llm import load_llm_config
 from src.config.webui import WEBUI_CHATBOT_CONFIG
 from src.prompts.prompts import MAIN_AGENT_SYS_PROMPT
@@ -37,18 +38,19 @@ class MainAgent(FnCallAgent):
         **kwargs,
     ) -> Iterator[List[Message]]:
         ### Step 1: Resolve the attached files
-        # The Last Message 
+        attachment_resolution = inline_uploaded_files(messages[-1])
+        if attachment_resolution.should_block:
+            yield [
+                Message(
+                    role='assistant',
+                    content=(
+                        '暂时无法读取你上传的附件。请上传 Markdown、TXT 或 YAML 文件，'
+                        '或者在消息中补充具体问题后重试。'
+                    ),
+                )
+            ]
+            return
 
-        # If has attached files
-        if isinstance(messages[-1]['content'], list) and any([
-            item.file for item in messages[-1]['content']
-        ]):
-            messages[-1]['content'].append(
-                ContentItem(text="\nI have uploaded some files, here are their contents:")
-            )
-            # TODO: inject the file content into messages
-
-            
         ### SubAgents WorkMode:
         ### SubAgent takes the previous whole messages history as input
         ### Its Last Return Message(Formatted Results) should be injected into MainAgent Messages 
