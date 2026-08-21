@@ -128,6 +128,7 @@ body {
 
 .gradio-container {
   max-width: 1560px !important;
+  width: min(1560px, calc(100% - 48px)) !important;
   margin-left: auto !important;
   margin-right: auto !important;
   padding-left: 24px !important;
@@ -140,23 +141,45 @@ body {
   margin-right: auto !important;
 }
 
+/* Gradio 5 puts its own 1280px cap on <main class="app"> and lets
+   inner wrappers shrink-to-fit — force them to fill the container */
+.gradio-container main.app,
+.gradio-container .app.fillable {
+  max-width: none !important;
+  width: 100% !important;
+}
+
+.gradio-container .wrap,
+.gradio-container .contain,
+.gradio-container .ms-gr-container {
+  width: 100% !important;
+}
+
+/* Hide Gradio's footer (its built-in theme switcher reloads the page
+   and loses the conversation; use the header toggle instead) */
+.gradio-container footer {
+  display: none !important;
+}
+
 /* ── Header theme toggle ── */
 #w3-theme-toggle {
   margin-left: auto;
   width: 32px;
   height: 32px;
   border-radius: 8px;
-  border: 1px solid var(--w3-border);
-  background: var(--w3-panel);
-  color: var(--w3-text-2);
+  border: 1px solid var(--w3-border) !important;
+  background: var(--w3-panel) !important;
+  color: var(--w3-text-2) !important;
   font-size: 15px;
   line-height: 1;
   cursor: pointer;
   transition: all 150ms ease;
+  box-shadow: none !important;
 }
 #w3-theme-toggle:hover {
-  color: var(--w3-accent);
-  border-color: var(--w3-accent);
+  color: var(--w3-accent) !important;
+  border-color: var(--w3-accent) !important;
+  background: var(--w3-panel-alt) !important;
 }
 
 /* ── Chat bubbles ── */
