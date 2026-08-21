@@ -1,4 +1,5 @@
 import copy
+
 BASIC_CONFIG = {
     # 远程 llama-server（经本地 SSH 隧道 127.0.0.1:11434 转发）
     "model": "",

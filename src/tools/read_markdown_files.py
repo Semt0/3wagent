@@ -1,11 +1,14 @@
-from qwen_agent.tools.base import BaseTool, register_tool
+from typing import ClassVar
+
 import json5
+from qwen_agent.tools.base import BaseTool, register_tool
+
 
 @register_tool('MarkDownReadTool')
 class MarkDownReadTool(BaseTool):
     name = "MarkDownReadTool"
     description = "MarkDown File Reading Tool, input markdown file absolute address, and return markdown file content."
-    parameters = {
+    parameters: ClassVar[dict] = {
         "type" : "object",
         "properties" : {
             "absolute_address" :{

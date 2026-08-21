@@ -1,14 +1,16 @@
+from typing import Dict, Iterator, List, Literal, Optional, Union
+
 from qwen_agent.agents import FnCallAgent
 from qwen_agent.gui import WebUI
 from qwen_agent.llm import BaseChatModel
 from qwen_agent.llm.schema import ContentItem, Message
 
-
-from src.prompts.prompts import MAIN_AGENT_SYS_PROMPT
-from src.config.webui import WEBUI_CHATBOT_CONFIG
 from src.config.llm import load_llm_config
+from src.config.webui import WEBUI_CHATBOT_CONFIG
+from src.prompts.prompts import MAIN_AGENT_SYS_PROMPT
+from src.tools.read_markdown_files import MarkDownReadTool  # noqa: F401
+from src.tools.read_yaml_files import YamlReadTool  # noqa: F401
 
-from typing import Optional,List,Union,Dict,Iterator
 
 class MainAgent(FnCallAgent):
     """Customize the main agent to resolve policy problem
@@ -25,7 +27,9 @@ class MainAgent(FnCallAgent):
 
     def _run(
         self,
-        messages: List[Message]
+        messages: List[Message],
+        lang: Literal['en', 'zh'] = 'en',
+        **kwargs,
     ) -> Iterator[List[Message]]:
         ### Step 1: Resolve the attached files
         # The Last Message 
@@ -56,6 +60,8 @@ class MainAgent(FnCallAgent):
         ### Step 6: Citation-Verifier SubAgent
 
         ### Step 7: Report Writing SubAgent
+
+        yield from super()._run(messages=messages, lang=lang, **kwargs)
 
 def run_3wagent(model_name):
     # Define Agent

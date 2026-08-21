@@ -1,7 +1,10 @@
-from src.agent.MainAgent import run_3wagent
-from qwen_agent.log import logger
 import argparse
+
+from qwen_agent.log import logger
+
+from src.agent.main_agent import run_3wagent
 from src.config.logger import SetUpHandler
+
 
 def parse_args():
     parser = argparse.ArgumentParser(description = "3wagent")
