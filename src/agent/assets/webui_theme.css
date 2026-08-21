@@ -1,243 +1,217 @@
 /* ══════════════════════════════════════════════════════════════
-   3wagent Gradio WebUI theme — "Deep Watch" dark console
+   3wagent Gradio WebUI theme — GitHub-Dark inspired, clean & calm
    Layered after qwen_agent's assets/appBot.css.
-   Targets Gradio 5 + modelscope_studio chatbot markup.
+
+   Strategy: restyle through Gradio 5 CSS variables (stable API)
+   instead of hashed svelte-* class selectors.
    ══════════════════════════════════════════════════════════════ */
 
-:root {
-  --w3-bg: #0a0f1a;
-  --w3-bg-raised: #0d1420;
-  --w3-panel: #111a2a;
-  --w3-panel-alt: #16223a;
-  --w3-border: rgba(120, 150, 200, 0.16);
-  --w3-border-strong: rgba(120, 150, 200, 0.28);
-  --w3-text: #e8eef8;
-  --w3-text-secondary: #a8b6cc;
-  --w3-text-muted: #5f7191;
-  --w3-accent: #5ea8ff;
-  --w3-accent-soft: rgba(94, 168, 255, 0.14);
-  --w3-cyan: #4fd8c8;
+:root, .dark {
+  /* palette */
+  --w3-bg: #0d1117;
+  --w3-panel: #161b22;
+  --w3-panel-alt: #1c2330;
+  --w3-border: #30363d;
+  --w3-text: #e6edf3;
+  --w3-text-2: #9198a1;
+  --w3-accent: #58a6ff;
+  --w3-accent-strong: #2f81f7;
+  --w3-green: #3fb950;
+
+  /* gradio variables */
+  --body-background-fill: var(--w3-bg);
+  --body-text-color: var(--w3-text);
+  --body-text-color-subdued: var(--w3-text-2);
+
+  --block-background-fill: var(--w3-panel);
+  --block-border-color: var(--w3-border);
+  --block-border-width: 1px;
+  --block-radius: 10px;
+  --block-shadow: none;
+  --block-title-text-color: var(--w3-text);
+
+  /* the floating "Chatbot" / section label chip */
+  --block-label-background-fill: transparent;
+  --block-label-text-color: var(--w3-text-2);
+  --block-label-border-color: transparent;
+  --block-label-border-width: 0px;
+  --block-label-shadow: none;
+  --block-label-radius: 6px;
+
+  --input-background-fill: var(--w3-panel-alt);
+  --input-border-color: var(--w3-border);
+  --input-border-color-focus: var(--w3-accent-strong);
+  --input-placeholder-color: var(--w3-text-2);
+  --input-radius: 8px;
+  --input-shadow: none;
+
+  --button-primary-background-fill: var(--w3-accent-strong);
+  --button-primary-background-fill-hover: #3b8cf5;
+  --button-primary-text-color: #ffffff;
+  --button-primary-border-color: transparent;
+  --button-secondary-background-fill: var(--w3-panel-alt);
+  --button-secondary-background-fill-hover: #262f3d;
+  --button-secondary-text-color: var(--w3-text);
+  --button-secondary-border-color: var(--w3-border);
+  --button-border-width: 1px;
+  --button-large-radius: 8px;
+  --button-shadow: none;
+  --button-shadow-hover: none;
+
+  /* checkbox / radio pills (plugin list) */
+  --checkbox-background-color: var(--w3-panel-alt);
+  --checkbox-background-color-selected: var(--w3-panel-alt);
+  --checkbox-background-color-focus: var(--w3-panel-alt);
+  --checkbox-border-color: var(--w3-border);
+  --checkbox-border-color-selected: var(--w3-accent-strong);
+  --checkbox-border-color-focus: var(--w3-accent-strong);
+  --checkbox-label-background-fill: transparent;
+  --checkbox-label-background-fill-selected: transparent;
+  --checkbox-label-background-fill-hover: var(--w3-panel-alt);
+  --checkbox-label-border-color: var(--w3-border);
+  --checkbox-label-border-color-hover: var(--w3-accent-strong);
+  --checkbox-label-text-color: var(--w3-text-2);
+  --checkbox-label-text-color-selected: var(--w3-text);
+  --checkbox-check: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='%233fb950' d='M6.2 12.2 2.4 8.4l1.1-1.1 2.7 2.7 6-6 1.1 1.1z'/%3E%3C/svg%3E");
+
+  --border-color-primary: var(--w3-border);
+  --border-color-accent: var(--w3-border);
+  --border-color-accent-subdued: var(--w3-border);
+
+  --link-text-color: var(--w3-accent);
+  --link-text-color-hover: #79b8ff;
+
+  --code-comment-color: #768390;
+  --stat-background-fill: var(--w3-accent-strong);
+
+  --shadow-drop: none;
+  --shadow-drop-lg: 0 8px 24px rgba(1, 4, 9, 0.5);
+  --shadow-spread: 0px;
+
+  --loader-color: var(--w3-accent-strong);
+
+  --color-accent: var(--w3-accent-strong);
+  --color-accent-soft: var(--w3-panel-alt);
 }
 
-/* ── App background with ambient glow ── */
-body, .gradio-container {
-  background: var(--w3-bg) !important;
-  background-image:
-    radial-gradient(900px 480px at 85% -10%, rgba(94, 168, 255, 0.08), transparent 60%),
-    radial-gradient(700px 480px at -10% 110%, rgba(79, 216, 200, 0.06), transparent 60%) !important;
-  color: var(--w3-text);
+body {
+  background: var(--w3-bg);
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI',
     'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
 }
 
 .gradio-container {
   max-width: 1280px !important;
-  margin: 0 auto;
 }
 
-/* ── Layout container ── */
-.container {
-  gap: 20px;
-  padding: 12px 0;
-}
-
-/* ── Panels (sidebar column, chat column) ── */
-.container > .column,
-.container .column {
-  background: var(--w3-panel);
-  border: 1px solid var(--w3-border);
-  border-radius: 14px;
-  padding: 16px;
-}
-
-/* ── Chatbot ── */
-.chatbot, .message-wrap {
-  background: transparent !important;
-  border: none !important;
-  font-size: 15px;
-}
-
-.message {
-  border-radius: 12px !important;
+/* ── Chatbot column ── */
+.gradio-container .message {
+  border-radius: 10px !important;
   line-height: 1.75;
-  padding: 12px 16px !important;
-  border: 1px solid var(--w3-border);
 }
 
-/* user bubble */
-.message.user, .row:has(.user) .message {
-  background: var(--w3-accent-soft) !important;
-  border-color: rgba(94, 168, 255, 0.35) !important;
-  color: var(--w3-text);
-}
-
-/* bot bubble */
-.message.bot, .message.bot * {
-  background: var(--w3-panel-alt) !important;
-  color: var(--w3-text-secondary);
-}
-
-.message.bot .markdown-body strong,
-.message.bot .markdown-body h1,
-.message.bot .markdown-body h2,
-.message.bot .markdown-body h3 {
-  color: var(--w3-text);
-}
-
-/* thought / tool-call details blocks */
-.markdown-body summary {
-  background-color: var(--w3-panel-alt) !important;
-  color: var(--w3-cyan) !important;
-  border: 1px solid var(--w3-border);
-  padding: 2px 10px !important;
-  border-radius: 9999px !important;
-  font-size: 0.82em;
-  letter-spacing: 0.02em;
-}
-
-/* avatars */
-.message .avatar, .avatar-container img {
-  border-radius: 50%;
-  border: 2px solid var(--w3-border-strong);
-  box-shadow: 0 0 0 3px rgba(94, 168, 255, 0.12);
-}
-
-/* ── Input area ── */
-textarea, input[type='text'], .multimodal-input, .input-row {
-  background: var(--w3-panel-alt) !important;
+/* user bubble: subtle blue tint */
+.gradio-container .message.user {
+  background: rgba(47, 129, 247, 0.16) !important;
+  border: 1px solid rgba(88, 166, 255, 0.35) !important;
   color: var(--w3-text) !important;
+}
+
+/* bot bubble: flat panel */
+.gradio-container .message.bot {
+  background: var(--w3-panel-alt) !important;
   border: 1px solid var(--w3-border) !important;
-  border-radius: 12px !important;
+  color: var(--w3-text) !important;
 }
 
-textarea:focus, input[type='text']:focus {
-  border-color: var(--w3-accent) !important;
-  box-shadow: 0 0 0 3px rgba(94, 168, 255, 0.22) !important;
-  outline: none !important;
+/* thought / tool-call <details> chips */
+.markdown-body summary {
+  background-color: transparent !important;
+  color: var(--w3-text-2) !important;
+  border: 1px solid var(--w3-border);
+  padding: 1px 10px !important;
+  border-radius: 9999px !important;
+  font-size: 0.8em;
+}
+.markdown-body summary:hover {
+  color: var(--w3-accent) !important;
+  border-color: var(--w3-accent-strong);
 }
 
-textarea::placeholder { color: var(--w3-text-muted) !important; }
-
-/* ── Buttons ── */
-button.primary, .btn-primary {
-  background: linear-gradient(135deg, var(--w3-accent), #4a8de0) !important;
-  color: #0a0f1a !important;
-  border: none !important;
-  border-radius: 10px !important;
-  font-weight: 600;
-  box-shadow: 0 4px 14px rgba(94, 168, 255, 0.28);
-  transition: transform 150ms ease, box-shadow 150ms ease;
-}
-
-button.primary:hover, .btn-primary:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 6px 18px rgba(94, 168, 255, 0.4);
-}
-
-button.secondary, button.lg {
-  border-radius: 10px !important;
-}
-
-/* ── Sidebar: agent info, examples, dropdown ── */
-label, .label-wrap span, .prose h1, .prose h2, .prose h3, .prose p {
-  color: var(--w3-text-secondary) !important;
+/* avatars: simple circle, no glow */
+.bot_avatar,
+.bot_avatar img {
+  border-radius: 50%;
 }
 
 .bot_cover {
   background: var(--w3-panel-alt);
   border: 1px solid var(--w3-border) !important;
-  border-radius: 12px;
-}
-
-.bot_name { color: var(--w3-text); }
-
-/* prompt suggestion examples */
-.examples .sample, .examples-table button, .gallery button {
-  background: var(--w3-panel-alt) !important;
-  border: 1px solid var(--w3-border) !important;
-  border-radius: 10px !important;
-  color: var(--w3-text-secondary) !important;
-  transition: all 150ms ease;
-}
-
-.examples .sample:hover, .examples-table button:hover, .gallery button:hover {
-  border-color: var(--w3-accent) !important;
-  color: var(--w3-text) !important;
-  background: var(--w3-accent-soft) !important;
-  transform: translateY(-1px);
-}
-
-/* dropdown */
-select, .dropdown, ul.options {
-  background: var(--w3-panel-alt) !important;
-  color: var(--w3-text) !important;
-  border: 1px solid var(--w3-border) !important;
-  border-radius: 10px !important;
-}
-
-/* ── Code highlighting (dark scheme, replaces light codehilite) ── */
-.codehilite {
-  background: #0a0e16 !important;
-  border: 1px solid var(--w3-border);
   border-radius: 10px;
-  padding: 14px 16px;
 }
-.codehilite pre { color: #c9d8ec; }
-.codehilite .hll { background-color: rgba(94, 168, 255, 0.12); }
-.codehilite .c, .codehilite .ch, .codehilite .cm, .codehilite .cp,
-.codehilite .cpf, .codehilite .c1, .codehilite .cs { color: #5f7191; font-style: italic; }
-.codehilite .k, .codehilite .kc, .codehilite .kd, .codehilite .kn,
-.codehilite .kp, .codehilite .kr { color: #7fbcff; font-weight: bold; }
-.codehilite .kt { color: #4fd8c8; }
-.codehilite .s, .codehilite .sa, .codehilite .sb, .codehilite .sc, .codehilite .dl,
-.codehilite .sd, .codehilite .s2, .codehilite .se, .codehilite .sh,
-.codehilite .si, .codehilite .sx, .codehilite .sr, .codehilite .s1,
-.codehilite .ss { color: #a5d6a7; }
-.codehilite .m, .codehilite .mb, .codehilite .mf, .codehilite .mh,
-.codehilite .mi, .codehilite .mo, .codehilite .il { color: #e8b44c; }
-.codehilite .na { color: #9d8cff; }
-.codehilite .nb, .codehilite .bp { color: #7fbcff; }
-.codehilite .nc, .codehilite .nn { color: #4fd8c8; font-weight: bold; }
-.codehilite .nf, .codehilite .fm { color: #82aaff; }
-.codehilite .nv, .codehilite .vc, .codehilite .vg, .codehilite .vi,
-.codehilite .vm { color: #f78c6c; }
-.codehilite .ow, .codehilite .o { color: #89ddff; }
-.codehilite .err { color: #f26d6d; border: none; }
+.bot_name {
+  color: var(--w3-text);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
 
-/* inline code + tables in markdown */
+/* ── markdown polish ── */
 .markdown-body code {
-  background: var(--w3-panel-alt);
-  border: 1px solid var(--w3-border);
+  background: rgba(110, 118, 129, 0.18);
   border-radius: 5px;
   padding: 1px 6px;
-  color: var(--w3-cyan);
+  color: #79c0ff;
 }
-
+.markdown-body pre {
+  background: #010409 !important;
+  border: 1px solid var(--w3-border);
+  border-radius: 8px;
+}
+.markdown-body pre code { background: none; color: #c9d1d9; }
 .markdown-body table { border-collapse: collapse; }
 .markdown-body th, .markdown-body td {
   border: 1px solid var(--w3-border) !important;
-  padding: 8px 12px;
+  padding: 7px 12px;
 }
-.markdown-body th {
-  background: var(--w3-panel-alt);
-  color: var(--w3-text);
-}
-
-.markdown-body a { color: var(--w3-accent); }
+.markdown-body th { background: var(--w3-panel-alt); }
 .markdown-body blockquote {
-  border-left: 3px solid var(--w3-accent);
-  background: var(--w3-accent-soft);
-  border-radius: 0 6px 6px 0;
-  padding: 8px 14px;
+  border-left: 3px solid var(--w3-border);
+  background: transparent;
+  color: var(--w3-text-2);
+  padding: 4px 14px;
 }
+.markdown-body a { color: var(--w3-accent); }
 
-/* ── Scrollbars ── */
+/* codehilite: GitHub-dark-ish */
+.codehilite { background: #010409 !important; border-radius: 8px; }
+.codehilite pre { color: #c9d1d9; }
+.codehilite .hll { background-color: rgba(88, 166, 255, 0.1); }
+.codehilite .c, .codehilite .ch, .codehilite .cm, .codehilite .cp,
+.codehilite .cpf, .codehilite .c1, .codehilite .cs { color: #768390; font-style: italic; }
+.codehilite .k, .codehilite .kc, .codehilite .kd, .codehilite .kn,
+.codehilite .kp, .codehilite .kr { color: #ff7b72; }
+.codehilite .kt { color: #79c0ff; }
+.codehilite .s, .codehilite .sa, .codehilite .sb, .codehilite .sc, .codehilite .dl,
+.codehilite .sd, .codehilite .s2, .codehilite .se, .codehilite .sh,
+.codehilite .si, .codehilite .sx, .codehilite .sr, .codehilite .s1,
+.codehilite .ss { color: #a5d6ff; }
+.codehilite .m, .codehilite .mb, .codehilite .mf, .codehilite .mh,
+.codehilite .mi, .codehilite .mo, .codehilite .il { color: #79c0ff; }
+.codehilite .na { color: #79c0ff; }
+.codehilite .nb, .codehilite .bp { color: #79c0ff; }
+.codehilite .nc, .codehilite .nn { color: #ffa657; font-weight: bold; }
+.codehilite .nf, .codehilite .fm { color: #d2a8ff; }
+.codehilite .nv, .codehilite .vc, .codehilite .vg, .codehilite .vi,
+.codehilite .vm { color: #79c0ff; }
+.codehilite .ow, .codehilite .o { color: #ff7b72; }
+.codehilite .err { color: #f85149; border: none; }
+
+/* ── scrollbars ── */
 ::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #1d2c4a; border-radius: 4px; }
-::-webkit-scrollbar-thumb:hover { background: var(--w3-text-muted); }
+::-webkit-scrollbar-thumb { background: #30363d; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #484f58; }
 
-/* ── Reduced motion ── */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;

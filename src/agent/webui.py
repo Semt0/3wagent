@@ -61,23 +61,35 @@ class ThemedWebUI(WebUI):
                 'monospace',
             ],
         ).set(
-            body_background_fill='#0a0f1a',
-            body_background_fill_dark='#0a0f1a',
-            body_text_color='#e8eef8',
-            body_text_color_dark='#e8eef8',
-            block_background_fill='#111a2a',
-            block_background_fill_dark='#111a2a',
-            block_border_color='rgba(120, 150, 200, 0.16)',
-            block_border_color_dark='rgba(120, 150, 200, 0.16)',
-            block_label_text_color='#a8b6cc',
-            block_label_text_color_dark='#a8b6cc',
-            input_background_fill='#16223a',
-            input_background_fill_dark='#16223a',
-            button_primary_background_fill='*primary_500',
-            button_primary_background_fill_dark='*primary_500',
-            button_primary_text_color='#0a0f1a',
-            button_primary_text_color_dark='#0a0f1a',
+            body_background_fill='#0d1117',
+            body_background_fill_dark='#0d1117',
+            body_text_color='#e6edf3',
+            body_text_color_dark='#e6edf3',
+            block_background_fill='#161b22',
+            block_background_fill_dark='#161b22',
+            block_border_color='#30363d',
+            block_border_color_dark='#30363d',
+            block_label_text_color='#9198a1',
+            block_label_text_color_dark='#9198a1',
+            input_background_fill='#1c2330',
+            input_background_fill_dark='#1c2330',
+            button_primary_background_fill='#2f81f7',
+            button_primary_background_fill_dark='#2f81f7',
+            button_primary_background_fill_hover='#3b8cf5',
+            button_primary_background_fill_hover_dark='#3b8cf5',
+            button_primary_text_color='#ffffff',
+            button_primary_text_color_dark='#ffffff',
         )
+
+        header_html = """
+<div style="display:flex;align-items:center;gap:12px;padding:4px 8px 14px;border-bottom:1px solid #30363d;margin-bottom:14px">
+  <div style="width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,#2f81f7,#58a6ff);display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;font-size:15px">3w</div>
+  <div>
+    <div style="font-size:16px;font-weight:600;color:#e6edf3;letter-spacing:-0.01em">3wagent</div>
+    <div style="font-size:12px;color:#9198a1">跨境政策合规分析助手</div>
+  </div>
+</div>
+"""
 
         with gr.Blocks(
                 css=_load_theme_css(),
@@ -86,6 +98,7 @@ class ThemedWebUI(WebUI):
         ) as demo:
             history = gr.State([])
             with ms.Application():
+                gr.HTML(header_html)
                 with gr.Row(elem_classes='container'):
                     with gr.Column(scale=4):
                         chatbot = mgr.Chatbot(value=convert_history_to_chatbot(messages=messages),
@@ -93,7 +106,7 @@ class ThemedWebUI(WebUI):
                                                   self.user_config,
                                                   self.agent_config_list,
                                               ],
-                                              height=850,
+                                              height=620,
                                               avatar_image_width=80,
                                               flushing=False,
                                               show_copy_button=True,
