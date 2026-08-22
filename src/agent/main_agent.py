@@ -1,15 +1,18 @@
 from typing import Dict, Iterator, List, Literal, Optional, Union
+import copy
 
 from qwen_agent.agents import FnCallAgent
 from qwen_agent.gui import WebUI
 from qwen_agent.llm import BaseChatModel
-from qwen_agent.llm.schema import ContentItem, Message
+from qwen_agent.llm.schema import ContentItem, Message, USER, ASSISTANT
 
 from src.config.llm import load_llm_config
 from src.config.webui import WEBUI_CHATBOT_CONFIG
 from src.prompts.prompts import MAIN_AGENT_SYS_PROMPT
 from src.tools.read_markdown_files import MarkDownReadTool  # noqa: F401
 from src.tools.read_yaml_files import YamlReadTool  # noqa: F401
+from src.tools.write_result import WriteResult
+from src.agent.routing_subagent import RoutingSubAgent
 
 
 class MainAgent(FnCallAgent):
@@ -22,8 +25,9 @@ class MainAgent(FnCallAgent):
         self,
         llm: Optional[Union[Dict, BaseChatModel]] = None,
     ):
-        tools = ['MarkDownReadTool', 'YamlReadTool']
+        tools = ['MarkDownReadTool', 'YamlReadTool', "WriteResult"]
         super().__init__(llm=llm, function_list=tools, system_message=MAIN_AGENT_SYS_PROMPT)
+        self.routing_agent = RoutingSubAgent(function_list=tools, llm=llm)
 
     def _run(
         self,
@@ -31,25 +35,41 @@ class MainAgent(FnCallAgent):
         lang: Literal['en', 'zh'] = 'en',
         **kwargs,
     ) -> Iterator[List[Message]]:
+        # DeepCopy, Empty Previous Response
+        new_messages = copy.deepcopy(messages)
+        response = []
+
         ### Step 1: Resolve the attached files
-        # The Last Message 
+
+        # The Last Message Must Be From User
+        assert(new_messages[-1]['role'] == USER)
 
         # If has attached files
-        if isinstance(messages[-1]['content'], list) and any([
-            item.file for item in messages[-1]['content']
+        if isinstance(new_messages[-1]['content'], list) and any([
+            item.file for item in new_messages[-1]['content']
         ]):
-            messages[-1]['content'].append(
+            new_messages[-1]['content'].append(
                 ContentItem(text="\nI have uploaded some files, here are their contents:")
             )
             # TODO: inject the file content into messages
 
             
         ### SubAgents WorkMode:
-        ### SubAgent takes the previous whole messages history as input
-        ### Its Last Return Message(Formatted Results) should be injected into MainAgent Messages 
+        ### SubAgent takes the previous whole messages history as input, as well as its own system prompt and user instruction
+        ### Its Last Result(Formatted Results Stored in files) should be injected into MainAgent Messages 
         ### Middle messages can be discarded to save tokens
         
         ### Step 2: Routing SubAgent
+        # subagent run
+        for rsp in self.routing_agent.run(new_messages):
+            yield response + rsp
+        
+        # add to previous response
+        response.extend(rsp)
+
+        # add the result into MainAgent messages
+        new_messages.append(Message(ASSISTANT,self.routing_agent.GetMainAgentBackPrompt()))
+
 
         ### Step 3: RAG SubAgent
 

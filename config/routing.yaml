@@ -1,5 +1,4 @@
 # Routing configuration — single source of truth for classification, keywords and agent mapping.
-# All agents and skills must reference this file instead of duplicating rules.
 
 classifications:
   - id: funds-forex

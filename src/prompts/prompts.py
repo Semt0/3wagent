@@ -31,8 +31,6 @@ All strategy data lives in `config/` as the single source of truth:
 - `config/jurisdictions.yaml` — Jurisdiction settings, case-law databases, registry paths
 - `config/output-contract.yaml` — Required and supporting report sections
 
-Agents and skills reference these files instead of duplicating definitions.
-
 ## Operating Principles
 
 See `.claude/principles.md` for the 7 operating principles.
@@ -44,7 +42,7 @@ See `.claude/contracts.md` for the task package format and output contract.
 ## Workflow
 
 1. **Intake** — If documents attached, use the `document-parse` first.
-2. **Frame & Launch** — Identify the issue profile, domains, jurisdictions. Classify per `config/routing.yaml`.
+2. **Frame** — Identify the issue profile, domains, jurisdictions. Classify per `config/routing.yaml`.
 3. **Retrieve** — Delegate to `rag-retriever` for official sources and case-law searches per `config/jurisdictions.yaml`.
 4. **Validate** — Delegate to `regulatory-validity-verifier` to check source status and single-tier amendment lineage.
 5. **Analyze** — Delegate to domain specialists per `config/routing.yaml` agent mappings.
@@ -97,4 +95,26 @@ reports/YYYYMMDD-topic/
 Use `tools/render_report.py` as the default local helper. The final answer should include the generated report path.
 
 For simple questions answered directly in chat, explicitly state that no report was generated.
+"""
+
+SUBAGENT_SYSTEM_PROMPT_TEMPLATE = """
+Now you are {sub_agent_name} under the main 3wagent, and your responsibilities are:
+{sub_agent_responsibilities}
+Please write your result into the file 'workspace/sub_agents/{sub_agent_name}_result.md' using WriteResult tool.
+Just write your result itself!!! You Mustn't write any other information into the md file.
+"""
+
+ROUTING_SUBAGENT_SYSTEM_PROMPT = SUBAGENT_SYSTEM_PROMPT_TEMPLATE.format(
+  sub_agent_name="routing_subagent",
+  sub_agent_responsibilities="Identify the issue profile, domains, jurisdictions. Classify per `config/routing.yaml`(using ReadYamlFiles tool)"
+)
+
+ROUTING_SUBAGENT_USER_PROMPT = "Now start your working according to the previous messages and information."
+
+MAIN_AGENT_BACK_PROMPT_TEMPLATE = """
+I have assigned {sub_agent_name} to complete {step_content} in my workflow.
+Now {sub_agent_name} has completed its work, and the results are as follow:
+<results>
+{result}
+</results>
 """
