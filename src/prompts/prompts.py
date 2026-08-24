@@ -111,10 +111,28 @@ ROUTING_SUBAGENT_SYSTEM_PROMPT = SUBAGENT_SYSTEM_PROMPT_TEMPLATE.format(
 
 ROUTING_SUBAGENT_USER_PROMPT = "Now start your working according to the previous messages and information."
 
+RAG_SUBAGENT_SYSTEM_PROMPT = SUBAGENT_SYSTEM_PROMPT_TEMPLATE.format(
+  sub_agent_name="rag_subagent",
+  sub_agent_responsibilities=(
+    "Retrieve official policy sources for the issue described in previous messages. "
+    "Steps: 1) Read `config/jurisdictions.yaml` and `config/routing.yaml` (using YamlReadTool) to get jurisdiction, domain and case-law database settings. "
+    "2) Read the matching registry files under `sources/` (e.g. `sources/cn.yaml`) and select official sources by domain and reliability (S/A/B first; C/D sources are leads only, mark them as such). "
+    "3) If the registry does not cover the issue, use SearxngSearchTool with short queries as fallback; also consider the case-law databases listed in `config/jurisdictions.yaml`. "
+    "4) Return source packs with: title, authority, URL, jurisdiction, domain, reliability level, applicable point, and date/status metadata where available. "
+    "5) As the priority output, return a numbered list of all involved currently-effective regulations with jurisdiction, issuing authority and current status. "
+    "IMPORTANT - You may ONLY use these tools (exact names): YamlReadTool, MarkDownReadTool, SearxngSearchTool, WriteResult. "
+    "Call format: <tool_call>\n{\"name\": \"<tool_name>\", \"arguments\": {<args>}}\n</tool_call> "
+    "Example reading a config file: <tool_call>\n{\"name\": \"YamlReadTool\", \"arguments\": {\"file_path\": \"config/routing.yaml\"}}\n</tool_call>"
+  )
+)
+
+RAG_SUBAGENT_USER_PROMPT = "Now start your retrieval work according to the previous messages and information."
+
 MAIN_AGENT_BACK_PROMPT_TEMPLATE = """
 I have assigned {sub_agent_name} to complete {step_content} in my workflow.
 Now {sub_agent_name} has completed its work, and the results are as follow:
 <results>
 {result}
 </results>
+Now Move on to the next step!
 """

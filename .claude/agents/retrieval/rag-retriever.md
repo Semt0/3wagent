@@ -21,5 +21,3 @@ When invoked:
 7. Use professional commentary only as leads — C and D sources cannot support final conclusions (see `config/source-levels.yaml`).
 8. Return source packs with title, authority, URL, jurisdiction, domain, reliability level, applicable point and available date/status metadata.
 9. **Return a numbered list of all involved currently-effective regulations** as a priority output, with jurisdiction, domain, issuing authority and current status.
-
-Return concise source packs. Do not write the final report.

@@ -12,7 +12,9 @@ from src.prompts.prompts import MAIN_AGENT_SYS_PROMPT
 from src.tools.read_markdown_files import MarkDownReadTool  # noqa: F401
 from src.tools.read_yaml_files import YamlReadTool  # noqa: F401
 from src.tools.write_result import WriteResult
+from src.tools.searxng_search import SearxngSearchTool  # noqa: F401
 from src.agent.routing_subagent import RoutingSubAgent
+from src.agent.rag_subagent import RagSubAgent
 
 
 class MainAgent(FnCallAgent):
@@ -26,8 +28,10 @@ class MainAgent(FnCallAgent):
         llm: Optional[Union[Dict, BaseChatModel]] = None,
     ):
         tools = ['MarkDownReadTool', 'YamlReadTool', "WriteResult"]
+        rag_tools = tools + ['SearxngSearchTool']
         super().__init__(llm=llm, function_list=tools, system_message=MAIN_AGENT_SYS_PROMPT)
         self.routing_agent = RoutingSubAgent(function_list=tools, llm=llm)
+        self.rag_agent = RagSubAgent(function_list=rag_tools, llm=llm)
 
     def _run(
         self,
@@ -72,6 +76,15 @@ class MainAgent(FnCallAgent):
 
 
         ### Step 3: RAG SubAgent
+        # subagent run
+        for rsp in self.rag_agent.run(new_messages):
+            yield response + rsp
+
+        # add to previous response
+        response.extend(rsp)
+
+        # add the result into MainAgent messages
+        new_messages.append(Message(ASSISTANT,self.rag_agent.GetMainAgentBackPrompt()))
 
         ### Step 4: Validate SubAgent 
 
