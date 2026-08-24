@@ -81,7 +81,7 @@ class MainAgent(FnCallAgent):
 
         ### Step 7: Report Writing SubAgent
 
-        yield from super()._run(messages=messages, lang=lang, **kwargs)
+        yield from super()._run(messages=new_messages, lang=lang, **kwargs)
 
 def run_3wagent(model_name):
     # Define Agent
