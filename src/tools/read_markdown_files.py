@@ -1,7 +1,7 @@
 from qwen_agent.tools.base import BaseTool, register_tool
 import json5
 
-from src.tools.common import resolve_project_path
+from src.tools.common import get_file_path_param, resolve_project_path
 
 
 @register_tool('MarkDownReadTool')
@@ -22,7 +22,10 @@ class MarkDownReadTool(BaseTool):
     }
 
     def call(self, params: str, **kwargs) -> str:
-        rel = json5.loads(params)["file_path"]
+        try:
+            rel = get_file_path_param(json5.loads(params))
+        except KeyError:
+            return 'error: missing required parameter "file_path" (a path relative to the project root)'
         try:
             path = resolve_project_path(rel)
         except (ValueError, OSError):
