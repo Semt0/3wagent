@@ -7,6 +7,7 @@ from qwen_agent.llm import BaseChatModel
 from qwen_agent.llm.schema import ASSISTANT, Message,USER
 
 from src.prompts.prompts import ROUTING_SUBAGENT_SYSTEM_PROMPT,ROUTING_SUBAGENT_USER_PROMPT, MAIN_AGENT_BACK_PROMPT_TEMPLATE
+from src.tools.common import PROJECT_ROOT
 
 class RoutingSubAgent(FnCallAgent):
     """Routing SubAgent
@@ -35,8 +36,8 @@ class RoutingSubAgent(FnCallAgent):
         yield from super()._run(messages=new_messages)
     
     def GetMainAgentBackPrompt(self):
-        with open("workspace/sub_agents/routing_subagent_result.md", "r", encoding="utf-8") as f:
-            result_content = f.read()
+        result_path = PROJECT_ROOT / "workspace/sub_agents/routing_subagent_result.md"
+        result_content = result_path.read_text(encoding="utf-8")
         return MAIN_AGENT_BACK_PROMPT_TEMPLATE.format(
             sub_agent_name = "routing_agent",
             step_content = "Step 2: Identify the issue profile, domains, jurisdictions",
