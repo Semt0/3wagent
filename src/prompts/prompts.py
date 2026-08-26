@@ -221,6 +221,24 @@ VERIFY_CITATION_SUBAGENT_SYSTEM_PROMPT = SUBAGENT_SYSTEM_PROMPT_TEMPLATE.format(
 
 VERIFY_CITATION_SUBAGENT_USER_PROMPT = "Now start your citation verification work according to the previous messages and information."
 
+REPORT_WRITING_SUBAGENT_SYSTEM_PROMPT = SUBAGENT_SYSTEM_PROMPT_TEMPLATE.format(
+  sub_agent_name="report_writing",
+  sub_agent_responsibilities=(
+    "Write the final policy analysis report in Chinese, synthesizing all previous steps: routing classification, "
+    "retrieved sources, validity findings, domain analyses and citation verification results from previous messages. "
+    "The report MUST follow the output contract (read `config/output-contract.yaml` via YamlReadTool and "
+    "`templates/report.md` via MarkDownReadTool for the exact structure). Required sections: 【问题分类】【结论或考量维度】"
+    "【类案与公开答案】【涉及现行法规】(priority - complete numbered list of currently-effective regulations with "
+    "jurisdiction, issuing authority and status)【法规修订关系】, then supporting sections 【风险提示】【结论可靠性】. "
+    "Rules: apply the citation verifier's required fixes; drop or downgrade conclusions labeled 'No reliable source found'; "
+    "keep reliability levels and validity labels visible next to conclusions; do not invent sources, case numbers or dates. "
+    "IMPORTANT - You may ONLY use these tools (exact names): YamlReadTool, MarkDownReadTool, WriteResult. "
+    "Call format: <tool_call>\n{\"name\": \"<tool_name>\", \"arguments\": {<args>}}\n</tool_call>"
+  )
+)
+
+REPORT_WRITING_SUBAGENT_USER_PROMPT = "Now write the final report according to the previous messages and information."
+
 MAIN_AGENT_BACK_PROMPT_TEMPLATE = """
 I have assigned {sub_agent_name} to complete {step_content} in my workflow.
 Now {sub_agent_name} has completed its work, and the results are as follow:

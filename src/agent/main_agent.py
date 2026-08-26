@@ -18,6 +18,7 @@ from src.agent.subagent import (
     CommercialLawAnalystSubAgent,
     FundsComplianceAnalystSubAgent,
     RagSubAgent,
+    ReportWritingSubAgent,
     RoutingSubAgent,
     TaxPolicyAnalystSubAgent,
     ValidateSubAgent,
@@ -48,6 +49,7 @@ class MainAgent(FnCallAgent):
         self.rag_agent = RagSubAgent(function_list=rag_tools, llm=llm)
         self.validate_agent = ValidateSubAgent(function_list=rag_tools, llm=llm)
         self.citation_verifier = CitationVerifierSubAgent(function_list=rag_tools, llm=llm)
+        self.report_writer = ReportWritingSubAgent(function_list=tools, llm=llm)
         # Domain analysts, selected per routing result (see _select_analysts)
         self.analysts = {
             'tax': TaxPolicyAnalystSubAgent(function_list=rag_tools, llm=llm),
@@ -132,6 +134,10 @@ class MainAgent(FnCallAgent):
         new_messages.append(Message(ASSISTANT, self.citation_verifier.get_back_prompt()))
 
         ### Step 7: Report Writing SubAgent
+        for rsp in self.report_writer.run(new_messages):
+            yield response + rsp
+        response.extend(rsp)
+        new_messages.append(Message(ASSISTANT, self.report_writer.get_back_prompt()))
 
         yield from super()._run(messages=new_messages, lang=lang, **kwargs)
 

@@ -29,6 +29,8 @@ from src.prompts.prompts import (
     VALIDATE_SUBAGENT_USER_PROMPT,
     VERIFY_CITATION_SUBAGENT_SYSTEM_PROMPT,
     VERIFY_CITATION_SUBAGENT_USER_PROMPT,
+    REPORT_WRITING_SUBAGENT_SYSTEM_PROMPT,
+    REPORT_WRITING_SUBAGENT_USER_PROMPT,
 )
 from src.tools.common import PROJECT_ROOT
 
@@ -171,5 +173,14 @@ class CitationVerifierSubAgent(BaseSubAgent):
     STEP_CONTENT = 'Step 6: Verify citations and source support before finalizing'
     SYSTEM_PROMPT = VERIFY_CITATION_SUBAGENT_SYSTEM_PROMPT
     USER_PROMPT = VERIFY_CITATION_SUBAGENT_USER_PROMPT
+
+
+class ReportWritingSubAgent(BaseSubAgent):
+    """Report writer: synthesize the final report per the output contract."""
+
+    SUBAGENT_NAME = 'report_writing'
+    STEP_CONTENT = 'Step 7: Write the final report per the output contract'
+    SYSTEM_PROMPT = REPORT_WRITING_SUBAGENT_SYSTEM_PROMPT
+    USER_PROMPT = REPORT_WRITING_SUBAGENT_USER_PROMPT
 
 
