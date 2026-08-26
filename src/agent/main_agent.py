@@ -14,6 +14,7 @@ from src.tools.read_yaml_files import YamlReadTool  # noqa: F401
 from src.tools.write_result import WriteResult
 from src.tools.searxng_search import SearxngSearchTool  # noqa: F401
 from src.agent.subagent import (
+    CitationVerifierSubAgent,
     CommercialLawAnalystSubAgent,
     FundsComplianceAnalystSubAgent,
     RagSubAgent,
@@ -46,6 +47,7 @@ class MainAgent(FnCallAgent):
         self.routing_agent = RoutingSubAgent(function_list=tools, llm=llm)
         self.rag_agent = RagSubAgent(function_list=rag_tools, llm=llm)
         self.validate_agent = ValidateSubAgent(function_list=rag_tools, llm=llm)
+        self.citation_verifier = CitationVerifierSubAgent(function_list=rag_tools, llm=llm)
         # Domain analysts, selected per routing result (see _select_analysts)
         self.analysts = {
             'tax': TaxPolicyAnalystSubAgent(function_list=rag_tools, llm=llm),
@@ -124,6 +126,10 @@ class MainAgent(FnCallAgent):
             new_messages.append(Message(ASSISTANT, analyst.get_back_prompt()))
 
         ### Step 6: Citation-Verifier SubAgent
+        for rsp in self.citation_verifier.run(new_messages):
+            yield response + rsp
+        response.extend(rsp)
+        new_messages.append(Message(ASSISTANT, self.citation_verifier.get_back_prompt()))
 
         ### Step 7: Report Writing SubAgent
 

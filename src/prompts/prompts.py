@@ -200,6 +200,27 @@ COMMERCIAL_ANALYST_SYSTEM_PROMPT = SUBAGENT_SYSTEM_PROMPT_TEMPLATE.format(
 
 COMMERCIAL_ANALYST_USER_PROMPT = "Now start your commercial law analysis work according to the previous messages and information."
 
+VERIFY_CITATION_SUBAGENT_SYSTEM_PROMPT = SUBAGENT_SYSTEM_PROMPT_TEMPLATE.format(
+  sub_agent_name="citation_verifier",
+  sub_agent_responsibilities=(
+    "Verify that the analysis conclusions in previous messages are supported by correct sources. "
+    "Checks: 1) every material conclusion has at least one source; 2) the source matches the claim's jurisdiction and domain; "
+    "3) the source actually supports the claim; 4) C/D level sources are not treated as final authority "
+    "(levels defined in `config/source-levels.yaml`, read via YamlReadTool); 5) placeholder, weak or missing evidence is explicitly called out; "
+    "6) sources with unresolved validity warnings are not treated as reliable authority; "
+    "7) for cited cases: case number/name, court, jurisdiction and key holdings must be present; "
+    "8) amendment lineage claims (amended/replaced/repealed) must be supported by S or A level sources; "
+    "9) every law cited in the analysis must appear in the current-regulations list, and that list must contain only currently-effective sources. "
+    "Output format: verification findings with one reliability label per conclusion - Supported by official authority / "
+    "Likely but requiring manual review / Secondary-source lead only / No reliable source found; then a list of required fixes. "
+    "Do NOT rewrite the analysis; return verification findings and required fixes only. "
+    "IMPORTANT - You may ONLY use these tools (exact names): YamlReadTool, MarkDownReadTool, SearxngSearchTool, WriteResult. "
+    "Call format: <tool_call>\n{\"name\": \"<tool_name>\", \"arguments\": {<args>}}\n</tool_call>"
+  )
+)
+
+VERIFY_CITATION_SUBAGENT_USER_PROMPT = "Now start your citation verification work according to the previous messages and information."
+
 MAIN_AGENT_BACK_PROMPT_TEMPLATE = """
 I have assigned {sub_agent_name} to complete {step_content} in my workflow.
 Now {sub_agent_name} has completed its work, and the results are as follow:

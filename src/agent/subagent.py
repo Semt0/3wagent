@@ -27,6 +27,8 @@ from src.prompts.prompts import (
     TAX_ANALYST_USER_PROMPT,
     VALIDATE_SUBAGENT_SYSTEM_PROMPT,
     VALIDATE_SUBAGENT_USER_PROMPT,
+    VERIFY_CITATION_SUBAGENT_SYSTEM_PROMPT,
+    VERIFY_CITATION_SUBAGENT_USER_PROMPT,
 )
 from src.tools.common import PROJECT_ROOT
 
@@ -160,5 +162,14 @@ class CommercialLawAnalystSubAgent(BaseSubAgent):
     STEP_CONTENT = 'Step 5: Analyze corporate and commercial law per the routing result'
     SYSTEM_PROMPT = COMMERCIAL_ANALYST_SYSTEM_PROMPT
     USER_PROMPT = COMMERCIAL_ANALYST_USER_PROMPT
+
+
+class CitationVerifierSubAgent(BaseSubAgent):
+    """Citation verifier: check conclusion support, jurisdiction and reliability."""
+
+    SUBAGENT_NAME = 'citation_verifier'
+    STEP_CONTENT = 'Step 6: Verify citations and source support before finalizing'
+    SYSTEM_PROMPT = VERIFY_CITATION_SUBAGENT_SYSTEM_PROMPT
+    USER_PROMPT = VERIFY_CITATION_SUBAGENT_USER_PROMPT
 
 
