@@ -33,6 +33,7 @@ from src.prompts.prompts import (
     REPORT_WRITING_SUBAGENT_SYSTEM_PROMPT,
     REPORT_WRITING_SUBAGENT_USER_PROMPT,
 )
+from src.config.runtime import get_run_dir_relative, get_subagents_dir
 from src.tools.common import PROJECT_ROOT
 
 # Import tools so their @register_tool side effects run (string refs in function_list)
@@ -71,7 +72,9 @@ class BaseSubAgent(FnCallAgent):
 
         # New system prompt for the subagent.
         # Role is ASSISTANT because SYSTEM must stay unique at position 0.
-        new_messages.append(Message(ASSISTANT, self.SYSTEM_PROMPT))
+        # <RUN_DIR> is filled at runtime so result files land in the current run's directory.
+        system_prompt = self.SYSTEM_PROMPT.replace('<RUN_DIR>', str(get_run_dir_relative()))
+        new_messages.append(Message(ASSISTANT, system_prompt))
 
         # User prompt to activate the task (with the real date so the model
         # never has to guess it)
@@ -87,7 +90,7 @@ class BaseSubAgent(FnCallAgent):
 
         Falls back to the sub-agent's final reply if the result file is missing.
         """
-        result_path = PROJECT_ROOT / 'workspace' / 'sub_agents' / f'{self.SUBAGENT_NAME}_result.md'
+        result_path = get_subagents_dir() / f'{self.SUBAGENT_NAME}_result.md'
         if result_path.exists():
             result = result_path.read_text(encoding='utf-8')
         else:

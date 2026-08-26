@@ -23,7 +23,8 @@ from src.agent.subagent import (
     TaxPolicyAnalystSubAgent,
     ValidateSubAgent,
 )
-from src.tools.common import PROJECT_ROOT
+from src.config.logger import attach_run_log
+from src.config.runtime import get_subagents_dir, new_run_id
 
 
 class MainAgent(FnCallAgent):
@@ -66,6 +67,10 @@ class MainAgent(FnCallAgent):
         # DeepCopy, Empty Previous Response
         new_messages = copy.deepcopy(messages)
         response = []
+
+        # Start a new run: all artifacts go under workspace/<run_id>/
+        new_run_id()
+        attach_run_log(getattr(self.llm, 'model', 'model') or 'model')
 
         ### Step 1: Resolve the attached files
         attachment_resolution = inline_uploaded_files(messages[-1])
@@ -149,7 +154,7 @@ class MainAgent(FnCallAgent):
         Falls back to the tax analyst when nothing matches (tax is the most
         common primary domain for the covered issue types).
         """
-        result_path = PROJECT_ROOT / 'workspace' / 'sub_agents' / 'routing_subagent_result.md'
+        result_path = get_subagents_dir() / 'routing_subagent_result.md'
         text = result_path.read_text(encoding='utf-8').lower() if result_path.exists() else ''
         selected = []
         if any(k in text for k in ('funds', '外汇', '资金合规', 'aml', '制裁')):

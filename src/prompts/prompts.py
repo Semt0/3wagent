@@ -100,7 +100,7 @@ For simple questions answered directly in chat, explicitly state that no report 
 SUBAGENT_SYSTEM_PROMPT_TEMPLATE = """
 Now you are {sub_agent_name} under the main 3wagent, and your responsibilities are:
 {sub_agent_responsibilities}
-Please write your result into the file 'workspace/sub_agents/{sub_agent_name}_result.md' using WriteResult tool.
+Please write your result into the file '<RUN_DIR>/sub_agents/{sub_agent_name}_result.md' using WriteResult tool.
 Just write your result itself!!! You Mustn't write any other information into the md file.
 """
 
