@@ -194,8 +194,9 @@ class FunctionalSubAgent(FnCallAgent):
 
     Unlike BaseSubAgent (workflow stages sharing conversation history), this
     agent receives ONLY its role prompt, the input and the output spec — no
-    history, no tools. Accuracy comes from context cleanliness. The caller
-    writes the result file.
+    history, no tools. Accuracy comes from context cleanliness. The formatted
+    output is written to a file so consumers read results via the same
+    file-based protocol as the workflow subagents.
 
     Current uses: policy-question detection, routing-result analyst selection.
     """
@@ -209,12 +210,13 @@ class FunctionalSubAgent(FnCallAgent):
         super().__init__(function_list=[], llm=llm, system_message=role_prompt, **kwargs)
 
     def run_task(self, input_text: str, output_spec: str, output_path) -> str:
-        """Run once with a clean context and save the formatted output.
+        """Run once with a clean context and write the formatted output to a file.
 
         Args:
             input_text: the input to judge/transform.
             output_spec: the formatted output requirements for the model.
-            output_path: file to write the formatted output into.
+            output_path: file to write the formatted output into; consumers
+                should read the result from this file (file-based protocol).
         """
         output_path.parent.mkdir(parents=True, exist_ok=True)
         user_msg = f"{input_text}\n\nOutput requirements:\n{output_spec}"

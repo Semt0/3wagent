@@ -112,12 +112,10 @@ class MainAgent(FnCallAgent):
             question = str(content or '')
         if not question.strip():
             return False
-        raw = self.mode_detector.run_task(
-            question,
-            MODE_DETECTION_OUTPUT_SPEC,
-            get_run_dir() / 'mode_detection.json',
-        )
+        result_path = get_run_dir() / 'mode_detection.json'
+        self.mode_detector.run_task(question, MODE_DETECTION_OUTPUT_SPEC, result_path)
         try:
+            raw = result_path.read_text(encoding='utf-8')
             match = re.search(r'\{.*\}', raw, re.S)
             return bool(json5.loads(match.group(0)).get('is_policy_question'))
         except Exception:
