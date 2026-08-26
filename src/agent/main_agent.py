@@ -139,7 +139,9 @@ class MainAgent(FnCallAgent):
         response.extend(rsp)
         new_messages.append(Message(ASSISTANT, self.report_writer.get_back_prompt()))
 
-        yield from super()._run(messages=new_messages, lang=lang, **kwargs)
+        # Final main loop: keep the accumulated subagent transcript in every frame
+        for rsp in super()._run(messages=new_messages, lang=lang, **kwargs):
+            yield response + rsp
 
     def _select_analysts(self):
         """Pick domain analysts by keyword-matching the routing result.
