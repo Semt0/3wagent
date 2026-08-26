@@ -13,8 +13,7 @@ from src.tools.read_markdown_files import MarkDownReadTool  # noqa: F401
 from src.tools.read_yaml_files import YamlReadTool  # noqa: F401
 from src.tools.write_result import WriteResult
 from src.tools.searxng_search import SearxngSearchTool  # noqa: F401
-from src.agent.routing_subagent import RoutingSubAgent
-from src.agent.rag_subagent import RagSubAgent
+from src.agent.subagent import RagSubAgent, RoutingSubAgent
 
 
 class MainAgent(FnCallAgent):
@@ -72,7 +71,7 @@ class MainAgent(FnCallAgent):
         response.extend(rsp)
 
         # add the result into MainAgent messages
-        new_messages.append(Message(ASSISTANT,self.routing_agent.GetMainAgentBackPrompt()))
+        new_messages.append(Message(ASSISTANT,self.routing_agent.get_back_prompt()))
 
 
         ### Step 3: RAG SubAgent
@@ -84,7 +83,7 @@ class MainAgent(FnCallAgent):
         response.extend(rsp)
 
         # add the result into MainAgent messages
-        new_messages.append(Message(ASSISTANT,self.rag_agent.GetMainAgentBackPrompt()))
+        new_messages.append(Message(ASSISTANT,self.rag_agent.get_back_prompt()))
 
         ### Step 4: Validate SubAgent 
 
