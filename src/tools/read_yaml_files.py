@@ -1,24 +1,38 @@
 from qwen_agent.tools.base import BaseTool, register_tool
-import yaml
 import json5
+
+from src.tools.common import get_file_path_param, resolve_project_path
+
 
 @register_tool('YamlReadTool')
 class YamlReadTool(BaseTool):
     name = "YamlReadTool"
-    description = "Yaml File Reading Tool, input yaml file absolute address, and return yaml file content."
+    description = ("Read a YAML file and return its content. "
+                   "Input a path relative to the project root, e.g. 'config/routing.yaml'. "
+                   "Do NOT guess absolute paths.")
     parameters = {
-        "type" : "object",
-        "properties" : {
-            "absolute_address" :{
-                "description" :"Absolute Address of the target yaml file",
-                "type" : "string"
+        "type": "object",
+        "properties": {
+            "file_path": {
+                "description": "File path relative to the project root, e.g. 'config/jurisdictions.yaml'",
+                "type": "string"
             }
         },
-        "required": ["absolute_address"]
+        "required": ["file_path"]
     }
 
     def call(self, params: str, **kwargs) -> str:
-        absolute_address = json5.loads(params)["absolute_address"]
-        with open(absolute_address, "r", encoding="utf-8") as f:
-            content = yaml.safe_load(f)
-        return content
+        try:
+            rel = get_file_path_param(json5.loads(params))
+        except KeyError:
+            return 'error: missing required parameter "file_path" (a path relative to the project root)'
+        try:
+            path = resolve_project_path(rel)
+        except (ValueError, OSError):
+            return f"error: invalid path or path escapes project root: {rel}"
+        if not path.is_file():
+            return f"error: file not found: {rel}"
+        try:
+            return path.read_text(encoding="utf-8")
+        except UnicodeDecodeError:
+            return f"error: not a UTF-8 text file: {rel}"
