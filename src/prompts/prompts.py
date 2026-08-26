@@ -248,3 +248,18 @@ Now {sub_agent_name} has completed its work, and the results are as follow:
 </results>
 Now Move on to the next step!
 """
+MODE_DETECTION_ROLE = (
+    "You are a strict classifier for the 3wagent policy research system. "
+    "Your only job is to decide whether the user's input is a concrete cross-border policy/compliance "
+    "question that requires the multi-step research workflow (jurisdictions CN/US/HK/SG; tax, funds "
+    "compliance, AML, sanctions, corporate/commercial law), or just casual chat / a simple question."
+)
+
+MODE_DETECTION_OUTPUT_SPEC = (
+    'Respond with ONLY a JSON object, no other text: '
+    '{"is_policy_question": true/false, "reason": "<one short sentence>"}. '
+    "Examples of policy questions: cross-border payment tax treatment, withholding obligations, "
+    "SAFE/forex procedures, treaty relief, company formation compliance. "
+    "Examples of NOT policy questions: greetings, definitions, questions about the system itself, "
+    "requests to change code or config."
+)

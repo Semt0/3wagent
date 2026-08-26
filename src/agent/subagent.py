@@ -189,3 +189,53 @@ class ReportWritingSubAgent(BaseSubAgent):
     USER_PROMPT = REPORT_WRITING_SUBAGENT_USER_PROMPT
 
 
+class FunctionalSubAgent(FnCallAgent):
+    """Generic single-shot functional subagent with a clean context.
+
+    Unlike BaseSubAgent (workflow stages sharing conversation history), this
+    agent receives ONLY its role prompt, the input and the output spec — no
+    history, no tools. Accuracy comes from context cleanliness. The caller
+    writes the result file.
+
+    Current uses: policy-question detection, routing-result analyst selection.
+    """
+
+    def __init__(
+        self,
+        role_prompt: str,
+        llm: Optional[Union[Dict, BaseChatModel]] = None,
+        **kwargs,
+    ):
+        super().__init__(function_list=[], llm=llm, system_message=role_prompt, **kwargs)
+
+    def run_task(self, input_text: str, output_spec: str, output_path) -> str:
+        """Run once with a clean context and save the formatted output.
+
+        Args:
+            input_text: the input to judge/transform.
+            output_spec: the formatted output requirements for the model.
+            output_path: file to write the formatted output into.
+        """
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        user_msg = f"{input_text}\n\nOutput requirements:\n{output_spec}"
+        messages = [Message(USER, user_msg)]
+        rsp: List[Message] = []
+        for rsp in self.run(messages):
+            pass
+        result = self._extract_last_text(rsp)
+        output_path.write_text(result, encoding='utf-8')
+        return result
+
+    @staticmethod
+    def _extract_last_text(rsp: List[Message]) -> str:
+        for msg in reversed(rsp or []):
+            if msg['role'] != ASSISTANT:
+                continue
+            content = msg.get('content')
+            if isinstance(content, str) and content.strip():
+                return content
+            if isinstance(content, list):
+                text = ''.join(item.get('text') or '' for item in content)
+                if text.strip():
+                    return text
+        return ''

@@ -1,5 +1,8 @@
 from typing import Dict, Iterator, List, Literal, Optional, Union
 import copy
+import json5
+import re
+from enum import Enum
 
 from qwen_agent.agents import FnCallAgent
 from qwen_agent.llm import BaseChatModel
@@ -8,7 +11,7 @@ from qwen_agent.llm.schema import ContentItem, Message, USER, ASSISTANT
 from src.agent.attachments import inline_uploaded_files
 from src.config.llm import load_llm_config
 from src.config.webui import WEBUI_CHATBOT_CONFIG
-from src.prompts.prompts import MAIN_AGENT_SYS_PROMPT
+from src.prompts.prompts import MAIN_AGENT_SYS_PROMPT, MODE_DETECTION_ROLE, MODE_DETECTION_OUTPUT_SPEC
 from src.tools.read_markdown_files import MarkDownReadTool  # noqa: F401
 from src.tools.read_yaml_files import YamlReadTool  # noqa: F401
 from src.tools.write_result import WriteResult
@@ -16,6 +19,7 @@ from src.tools.searxng_search import SearxngSearchTool  # noqa: F401
 from src.agent.subagent import (
     CitationVerifierSubAgent,
     CommercialLawAnalystSubAgent,
+    FunctionalSubAgent,
     FundsComplianceAnalystSubAgent,
     RagSubAgent,
     ReportWritingSubAgent,
@@ -24,13 +28,27 @@ from src.agent.subagent import (
     ValidateSubAgent,
 )
 from src.config.logger import attach_run_log
-from src.config.runtime import get_subagents_dir, new_run_id
+from src.config.runtime import get_run_dir, get_subagents_dir, new_run_id
+
+
+class AgentMode(Enum):
+    """Top-level modes of the main agent.
+
+    NORMAL: casual Q&A, answer directly.
+    WORKING: a policy question is being processed by the workflow.
+
+    Future extensions: per-subagent states, failure rollback to NORMAL,
+    redo requests back to an earlier subagent.
+    """
+    NORMAL = 'normal'
+    WORKING = 'working'
 
 
 class MainAgent(FnCallAgent):
     """Customize the main agent to resolve policy problem
-    Current Design Plan: Automaton Design???
-    Need Further Discussion
+
+    Two modes (AgentMode): NORMAL for casual Q&A, WORKING for the policy
+    research workflow. Mode detection is delegated to a FunctionalSubAgent.
     """
 
     def __init__(
@@ -57,8 +75,56 @@ class MainAgent(FnCallAgent):
             'funds': FundsComplianceAnalystSubAgent(function_list=rag_tools, llm=llm),
             'commercial': CommercialLawAnalystSubAgent(function_list=rag_tools, llm=llm),
         }
+        # Functional subagent for policy-question detection (clean context)
+        self.mode_detector = FunctionalSubAgent(role_prompt=MODE_DETECTION_ROLE, llm=llm)
+        self.mode = AgentMode.NORMAL
 
     def _run(
+        self,
+        messages: List[Message],
+        lang: Literal['en', 'zh'] = 'en',
+        **kwargs,
+    ) -> Iterator[List[Message]]:
+        # Start a new run: all artifacts go under workspace/<run_id>/
+        new_run_id()
+        attach_run_log(getattr(self.llm, 'model', 'model') or 'model')
+
+        # Mode transition: NORMAL -> WORKING when a policy question is detected.
+        # (Detection is skipped while WORKING; the workflow finishes within one
+        # _run call, and failures also fall back to NORMAL via the finally below.)
+        if self.mode == AgentMode.NORMAL and self._is_policy_question(messages[-1]):
+            self.mode = AgentMode.WORKING
+
+        if self.mode == AgentMode.WORKING:
+            try:
+                yield from self._run_workflow(messages, lang=lang, **kwargs)
+            finally:
+                self.mode = AgentMode.NORMAL
+        else:
+            yield from super()._run(messages=messages, lang=lang, **kwargs)
+
+    def _is_policy_question(self, last_message: Message) -> bool:
+        """Ask the functional subagent whether this input is a policy question."""
+        content = last_message.get('content')
+        if isinstance(content, list):
+            question = ''.join(item.get('text') or '' for item in content)
+        else:
+            question = str(content or '')
+        if not question.strip():
+            return False
+        raw = self.mode_detector.run_task(
+            question,
+            MODE_DETECTION_OUTPUT_SPEC,
+            get_run_dir() / 'mode_detection.json',
+        )
+        try:
+            match = re.search(r'\{.*\}', raw, re.S)
+            return bool(json5.loads(match.group(0)).get('is_policy_question'))
+        except Exception:
+            # Parse failure: stay in NORMAL (conservative)
+            return False
+
+    def _run_workflow(
         self,
         messages: List[Message],
         lang: Literal['en', 'zh'] = 'en',
@@ -67,10 +133,6 @@ class MainAgent(FnCallAgent):
         # DeepCopy, Empty Previous Response
         new_messages = copy.deepcopy(messages)
         response = []
-
-        # Start a new run: all artifacts go under workspace/<run_id>/
-        new_run_id()
-        attach_run_log(getattr(self.llm, 'model', 'model') or 'model')
 
         ### Step 1: Resolve the attached files
         attachment_resolution = inline_uploaded_files(messages[-1])
