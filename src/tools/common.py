@@ -1,4 +1,4 @@
-"""Shared path helper for the file tools.
+"""Shared path and parameter helpers for the file tools.
 
 All tools take paths relative to the project root; resolution and
 confinement live here so every tool enforces the same boundary.
@@ -6,7 +6,25 @@ confinement live here so every tool enforces the same boundary.
 
 from pathlib import Path
 
+import json5
+
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
+
+
+def parse_tool_params(params) -> dict:
+    """Parse tool-call params, tolerating double-encoded JSON from the model.
+
+    Small models sometimes emit `arguments` as a JSON-encoded string instead
+    of a JSON object; unwrap one extra layer in that case.
+    """
+    if isinstance(params, dict):
+        return params
+    parsed = json5.loads(params)
+    if isinstance(parsed, str):
+        parsed = json5.loads(parsed)
+    if not isinstance(parsed, dict):
+        raise ValueError("arguments must be a JSON object")
+    return parsed
 
 
 def resolve_project_path(file_path: str) -> Path:

@@ -1,15 +1,16 @@
 from qwen_agent.tools.base import BaseTool, register_tool
-import json5
 
-from src.tools.common import get_file_path_param, resolve_project_path
+from src.tools.common import get_file_path_param, parse_tool_params, resolve_project_path
 
 
 @register_tool('YamlReadTool')
 class YamlReadTool(BaseTool):
     name = "YamlReadTool"
     description = ("Read a YAML file and return its content. "
-                   "Input a path relative to the project root, e.g. 'config/routing.yaml'. "
-                   "Do NOT guess absolute paths.")
+                   "Call format: <tool_call>\n"
+                   "{\"name\": \"YamlReadTool\", \"arguments\": {\"file_path\": \"config/routing.yaml\"}}\n"
+                   "</tool_call>\n"
+                   "file_path must be relative to the project root. Do NOT guess absolute paths.")
     parameters = {
         "type": "object",
         "properties": {
@@ -23,7 +24,12 @@ class YamlReadTool(BaseTool):
 
     def call(self, params: str, **kwargs) -> str:
         try:
-            rel = get_file_path_param(json5.loads(params))
+            par = parse_tool_params(params)
+        except Exception:
+            return ('error: invalid arguments. Use a JSON object like '
+                    '{"file_path": "config/routing.yaml"} (arguments itself must NOT be a quoted string).')
+        try:
+            rel = get_file_path_param(par)
         except KeyError:
             return 'error: missing required parameter "file_path" (a path relative to the project root)'
         try:

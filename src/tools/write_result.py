@@ -1,15 +1,18 @@
 from qwen_agent.tools.base import BaseTool, register_tool
-import json5
 
-from src.tools.common import get_file_path_param, resolve_project_path
+from src.tools.common import get_file_path_param, parse_tool_params, resolve_project_path
 
 
 @register_tool("WriteResult")
 class WriteResult(BaseTool):
     name = "WriteResult"
     description = ("Write text content to a file (creating parent directories as needed). "
-                   "Input a path relative to the project root, e.g. 'workspace/sub_agents/routing_agent_result.md'. "
-                   "Do NOT guess absolute paths.")
+                   "Call format: <tool_call>\n"
+                   "{\"name\": \"WriteResult\", \"arguments\": {\"file_path\": \"workspace/sub_agents/xxx_result.md\", "
+                   "\"file_content\": \"...\"}}\n"
+                   "</tool_call>\n"
+                   "file_path must be relative to the project root. Do NOT guess absolute paths. "
+                   "arguments must be a JSON object, NOT a quoted string.")
     parameters = {
         "type": "object",
         "properties": {
@@ -26,15 +29,23 @@ class WriteResult(BaseTool):
     }
 
     def call(self, params: str, **kwargs) -> str:
-        par = json5.loads(params)
+        try:
+            par = parse_tool_params(params)
+        except Exception:
+            return ('error: invalid arguments. Use a JSON object like '
+                    '{"file_path": "workspace/sub_agents/xxx_result.md", "file_content": "..."} '
+                    '(arguments itself must NOT be a quoted string).')
         try:
             rel = get_file_path_param(par)
         except KeyError:
             return 'error: missing required parameter "file_path" (a path relative to the project root)'
+        content = par.get("file_content")
+        if not isinstance(content, str):
+            return 'error: missing required parameter "file_content" (a string)'
         try:
             path = resolve_project_path(rel)
         except (ValueError, OSError):
             return f"error: invalid path or path escapes project root: {rel}"
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(par["file_content"], encoding="utf-8")
-        return f"ok: wrote {len(par['file_content'])} chars to {rel}"
+        path.write_text(content, encoding="utf-8")
+        return f"ok: wrote {len(content)} chars to {rel}"
