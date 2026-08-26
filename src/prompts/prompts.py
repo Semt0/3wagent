@@ -128,6 +128,27 @@ RAG_SUBAGENT_SYSTEM_PROMPT = SUBAGENT_SYSTEM_PROMPT_TEMPLATE.format(
 
 RAG_SUBAGENT_USER_PROMPT = "Now start your retrieval work according to the previous messages and information."
 
+VALIDATE_SUBAGENT_SYSTEM_PROMPT = SUBAGENT_SYSTEM_PROMPT_TEMPLATE.format(
+  sub_agent_name="validate_subagent",
+  sub_agent_responsibilities=(
+    "Verify the regulatory validity of every source in the retrieval results from previous messages. "
+    "Steps: 1) For each cited law, regulation, notice, guidance or official case, check whether it is currently effective, repealed, replaced, amended, superseded or time-limited. "
+    "2) Trace single-tier amendment lineage: for each currently-effective regulation, identify the direct prior regulation it amended/replaced/repealed and the relationship type (修订/替代/废止). "
+    "3) Check whether the applicable version depends on the transaction date, tax year, payment date or effective date. "
+    "4) Distinguish current regulations from news releases, interpretations, historical archives and navigation pages. "
+    "5) Reliability scale is in `config/source-levels.yaml` (read via YamlReadTool): amendment lineage claims must be supported by S or A level sources. "
+    "If the local sources do not confirm validity, use SearxngSearchTool with short queries to check official sites. "
+    "Output format: a concise validity table assigning each source exactly one label - Currently effective / Likely effective but requiring manual review / Historical version replaced / Repealed / Unable to confirm validity; "
+    "then the two priority outputs: (1) a numbered list of currently-effective regulations with jurisdiction, issuing authority and status; (2) an amendment lineage table. "
+    "Do NOT leave verification TODOs - every source must get a verdict label. "
+    "IMPORTANT - You may ONLY use these tools (exact names): YamlReadTool, MarkDownReadTool, SearxngSearchTool, WriteResult. "
+    "Call format: <tool_call>\n{\"name\": \"<tool_name>\", \"arguments\": {<args>}}\n</tool_call> "
+    "Example reading a config file: <tool_call>\n{\"name\": \"YamlReadTool\", \"arguments\": {\"file_path\": \"config/source-levels.yaml\"}}\n</tool_call>"
+  )
+)
+
+VALIDATE_SUBAGENT_USER_PROMPT = "Now start your validity verification work according to the previous messages and information."
+
 MAIN_AGENT_BACK_PROMPT_TEMPLATE = """
 I have assigned {sub_agent_name} to complete {step_content} in my workflow.
 Now {sub_agent_name} has completed its work, and the results are as follow:

@@ -19,6 +19,8 @@ from src.prompts.prompts import (
     RAG_SUBAGENT_USER_PROMPT,
     ROUTING_SUBAGENT_SYSTEM_PROMPT,
     ROUTING_SUBAGENT_USER_PROMPT,
+    VALIDATE_SUBAGENT_SYSTEM_PROMPT,
+    VALIDATE_SUBAGENT_USER_PROMPT,
 )
 from src.tools.common import PROJECT_ROOT
 
@@ -116,3 +118,13 @@ class RagSubAgent(BaseSubAgent):
     STEP_CONTENT = 'Step 3: Retrieve official policy sources and case-law references'
     SYSTEM_PROMPT = RAG_SUBAGENT_SYSTEM_PROMPT
     USER_PROMPT = RAG_SUBAGENT_USER_PROMPT
+
+
+class ValidateSubAgent(BaseSubAgent):
+    """Validate SubAgent: verify regulatory validity and amendment lineage."""
+
+    SUBAGENT_NAME = 'validate_subagent'
+    STEP_CONTENT = 'Step 4: Verify source status, effective dates and amendment lineage'
+    SYSTEM_PROMPT = VALIDATE_SUBAGENT_SYSTEM_PROMPT
+    USER_PROMPT = VALIDATE_SUBAGENT_USER_PROMPT
+

@@ -13,7 +13,7 @@ from src.tools.read_markdown_files import MarkDownReadTool  # noqa: F401
 from src.tools.read_yaml_files import YamlReadTool  # noqa: F401
 from src.tools.write_result import WriteResult
 from src.tools.searxng_search import SearxngSearchTool  # noqa: F401
-from src.agent.subagent import RagSubAgent, RoutingSubAgent
+from src.agent.subagent import RagSubAgent, RoutingSubAgent, ValidateSubAgent
 
 
 class MainAgent(FnCallAgent):
@@ -37,6 +37,7 @@ class MainAgent(FnCallAgent):
         )
         self.routing_agent = RoutingSubAgent(function_list=tools, llm=llm)
         self.rag_agent = RagSubAgent(function_list=rag_tools, llm=llm)
+        self.validate_agent = ValidateSubAgent(function_list=rag_tools, llm=llm)
 
     def _run(
         self,
@@ -90,7 +91,16 @@ class MainAgent(FnCallAgent):
         # add the result into MainAgent messages
         new_messages.append(Message(ASSISTANT,self.rag_agent.get_back_prompt()))
 
-        ### Step 4: Validate SubAgent 
+        ### Step 4: Validate SubAgent
+        # subagent run
+        for rsp in self.validate_agent.run(new_messages):
+            yield response + rsp
+
+        # add to previous response
+        response.extend(rsp)
+
+        # add the result into MainAgent messages
+        new_messages.append(Message(ASSISTANT,self.validate_agent.get_back_prompt()))
 
         ### Step 5: Analysis SubAgent For Specific Domain According to Routing Result
 
