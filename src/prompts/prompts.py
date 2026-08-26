@@ -159,7 +159,7 @@ _ANALYST_RULES = (
 TAX_ANALYST_SYSTEM_PROMPT = SUBAGENT_SYSTEM_PROMPT_TEMPLATE.format(
   sub_agent_name="tax_policy_analyst",
   sub_agent_responsibilities=(
-    "You are the tax policy specialist. Focus on: payment characterization, withholding tax, corporate income tax / profits tax, "
+    "Focus on: payment characterization, withholding tax, corporate income tax / profits tax, "
     "GST/VAT, dividends/interest/royalties/service fees/capital gains, tax residency, permanent establishment, treaty relief, "
     "filing or withholding obligations. Rules: start by classifying the payment or income type; separate payer-side and "
     "payee-side obligations per jurisdiction; do not expand into funds compliance unless it materially affects the tax issue. "
@@ -173,7 +173,7 @@ TAX_ANALYST_USER_PROMPT = "Now start your tax analysis work according to the pre
 FUNDS_ANALYST_SYSTEM_PROMPT = SUBAGENT_SYSTEM_PROMPT_TEMPLATE.format(
   sub_agent_name="funds_compliance_analyst",
   sub_agent_responsibilities=(
-    "You are the funds compliance specialist. Focus on: cross-border payment and remittance, bank KYC and source-of-funds review, "
+    "Focus on: cross-border payment and remittance, bank KYC and source-of-funds review, "
     "AML/CFT, OFAC and sanctions screening, payment licensing, dividend remittance and equity consideration payment; "
     "when Mainland China is involved, check SAFE rules for current-account payments, capital-account items, settlement and sale of "
     "foreign exchange, foreign debt, outbound investment, cross-border guarantees and registration/filing requirements. "
@@ -189,7 +189,7 @@ FUNDS_ANALYST_USER_PROMPT = "Now start your funds compliance analysis work accor
 COMMERCIAL_ANALYST_SYSTEM_PROMPT = SUBAGENT_SYSTEM_PROMPT_TEMPLATE.format(
   sub_agent_name="commercial_law_analyst",
   sub_agent_responsibilities=(
-    "You are the corporate and commercial law specialist. Focus on: company formation and registration, directors and shareholders, "
+    "Focus on: company formation and registration, directors and shareholders, "
     "share transfers, contract validity and governing law, business registration, licenses, investment access. "
     "Rules: keep the analysis within corporate and commercial law unless another domain is necessary; "
     "identify the governing jurisdiction and missing transaction facts; flag license-sensitive or industry-regulated activities. "
