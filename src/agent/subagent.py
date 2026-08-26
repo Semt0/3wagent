@@ -15,6 +15,7 @@ from qwen_agent.llm.schema import ASSISTANT, USER, Message
 from qwen_agent.tools import BaseTool
 
 from src.prompts.prompts import (
+    FUNCTIONAL_TASK_USER_PROMPT_TEMPLATE,
     MAIN_AGENT_BACK_PROMPT_TEMPLATE,
     RAG_SUBAGENT_SYSTEM_PROMPT,
     RAG_SUBAGENT_USER_PROMPT,
@@ -189,17 +190,20 @@ class ReportWritingSubAgent(BaseSubAgent):
     USER_PROMPT = REPORT_WRITING_SUBAGENT_USER_PROMPT
 
 
-class FunctionalSubAgent(FnCallAgent):
+class FunctionalSubAgent(BaseSubAgent):
     """Generic single-shot functional subagent with a clean context.
 
-    Unlike BaseSubAgent (workflow stages sharing conversation history), this
-    agent receives ONLY its role prompt, the input and the output spec — no
-    history, no tools. Accuracy comes from context cleanliness. The formatted
-    output is written to a file so consumers read results via the same
-    file-based protocol as the workflow subagents.
+    Same mechanism as the workflow subagents (system prompt + activation
+    prompt + WriteResult tool, result consumed from a file), but receives NO
+    conversation history: accuracy comes from context cleanliness. Each
+    run_task call is one-shot.
 
     Current uses: policy-question detection, routing-result analyst selection.
     """
+
+    SUBAGENT_NAME = 'functional_subagent'
+    STEP_CONTENT = 'Functional task'
+    TOOLS = ['WriteResult']
 
     def __init__(
         self,
@@ -207,37 +211,30 @@ class FunctionalSubAgent(FnCallAgent):
         llm: Optional[Union[Dict, BaseChatModel]] = None,
         **kwargs,
     ):
-        super().__init__(function_list=[], llm=llm, system_message=role_prompt, **kwargs)
+        self.SYSTEM_PROMPT = role_prompt
+        super().__init__(llm=llm, **kwargs)
 
     def run_task(self, input_text: str, output_spec: str, output_path) -> str:
-        """Run once with a clean context and write the formatted output to a file.
+        """Run once with a clean context; the model writes the formatted output.
 
         Args:
             input_text: the input to judge/transform.
             output_spec: the formatted output requirements for the model.
-            output_path: file to write the formatted output into; consumers
-                should read the result from this file (file-based protocol).
+            output_path: file the model must write the output into (via the
+                WriteResult tool); consumers read the result from this file.
+
+        Returns the model's final reply as a fallback for when it failed to
+        write the file.
         """
         output_path.parent.mkdir(parents=True, exist_ok=True)
-        user_msg = f"{input_text}\n\nOutput requirements:\n{output_spec}"
-        messages = [Message(USER, user_msg)]
+        self.USER_PROMPT = FUNCTIONAL_TASK_USER_PROMPT_TEMPLATE.format(
+            output_spec=output_spec,
+            output_path=output_path.relative_to(PROJECT_ROOT),
+        )
+        # The input goes first: chat APIs reject histories that start with an
+        # assistant message (the sub-agent system prompt is an ASSISTANT
+        # message in the BaseSubAgent protocol).
         rsp: List[Message] = []
-        for rsp in self.run(messages):
+        for rsp in self.run([Message(USER, input_text)]):
             pass
-        result = self._extract_last_text(rsp)
-        output_path.write_text(result, encoding='utf-8')
-        return result
-
-    @staticmethod
-    def _extract_last_text(rsp: List[Message]) -> str:
-        for msg in reversed(rsp or []):
-            if msg['role'] != ASSISTANT:
-                continue
-            content = msg.get('content')
-            if isinstance(content, str) and content.strip():
-                return content
-            if isinstance(content, list):
-                text = ''.join(item.get('text') or '' for item in content)
-                if text.strip():
-                    return text
-        return ''
+        return self._last_output_text

@@ -113,9 +113,11 @@ class MainAgent(FnCallAgent):
         if not question.strip():
             return False
         result_path = get_run_dir() / 'mode_detection.json'
-        self.mode_detector.run_task(question, MODE_DETECTION_OUTPUT_SPEC, result_path)
+        fallback_text = self.mode_detector.run_task(question, MODE_DETECTION_OUTPUT_SPEC, result_path)
         try:
-            raw = result_path.read_text(encoding='utf-8')
+            # File-based protocol: the model writes the file via WriteResult;
+            # fall back to its final reply if it failed to write.
+            raw = result_path.read_text(encoding='utf-8') if result_path.exists() else fallback_text
             match = re.search(r'\{.*\}', raw, re.S)
             return bool(json5.loads(match.group(0)).get('is_policy_question'))
         except Exception:

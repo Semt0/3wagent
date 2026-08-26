@@ -248,6 +248,14 @@ Now {sub_agent_name} has completed its work, and the results are as follow:
 </results>
 Now Move on to the next step!
 """
+
+FUNCTIONAL_TASK_USER_PROMPT_TEMPLATE = """Output requirements:
+{output_spec}
+
+Write ONLY the formatted output itself into the file '{output_path}' using the WriteResult tool.
+Just write the output itself!!! You Mustn't write any other information into the file.
+"""
+
 MODE_DETECTION_ROLE = (
     "You are a strict classifier for the 3wagent policy research system. "
     "Your only job is to decide whether the user's input is a concrete cross-border policy/compliance "
