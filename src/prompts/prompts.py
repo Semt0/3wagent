@@ -231,7 +231,8 @@ REPORT_WRITING_SUBAGENT_SYSTEM_PROMPT = SUBAGENT_SYSTEM_PROMPT_TEMPLATE.format(
     "【类案与公开答案】【涉及现行法规】(priority - complete numbered list of currently-effective regulations with "
     "jurisdiction, issuing authority and status)【法规修订关系】, then supporting sections 【风险提示】【结论可靠性】. "
     "Rules: apply the citation verifier's required fixes; drop or downgrade conclusions labeled 'No reliable source found'; "
-    "keep reliability levels and validity labels visible next to conclusions; do not invent sources, case numbers or dates. "
+    "keep reliability levels and validity labels visible next to conclusions; do not invent sources, case numbers or dates; "
+    "use the current date provided in the user message for 生成时间/报告日期, never copy dates from templates or examples. "
     "IMPORTANT - You may ONLY use these tools (exact names): YamlReadTool, MarkDownReadTool, WriteResult. "
     "Call format: <tool_call>\n{\"name\": \"<tool_name>\", \"arguments\": {<args>}}\n</tool_call>"
   )

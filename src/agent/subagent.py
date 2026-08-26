@@ -6,6 +6,7 @@ sub-agents only declare identity and prompts as class attributes.
 """
 
 import copy
+from datetime import date
 from typing import Dict, Iterator, List, Optional, Union
 
 from qwen_agent.agents import FnCallAgent
@@ -72,8 +73,9 @@ class BaseSubAgent(FnCallAgent):
         # Role is ASSISTANT because SYSTEM must stay unique at position 0.
         new_messages.append(Message(ASSISTANT, self.SYSTEM_PROMPT))
 
-        # User prompt to activate the task
-        new_messages.append(Message(USER, self.USER_PROMPT))
+        # User prompt to activate the task (with the real date so the model
+        # never has to guess it)
+        new_messages.append(Message(USER, f'{self.USER_PROMPT}\n(Current date: {date.today().isoformat()})'))
 
         rsp: List[Message] = []
         for rsp in super()._run(messages=new_messages, **kwargs):
