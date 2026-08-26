@@ -19,6 +19,12 @@ from src.prompts.prompts import (
     RAG_SUBAGENT_USER_PROMPT,
     ROUTING_SUBAGENT_SYSTEM_PROMPT,
     ROUTING_SUBAGENT_USER_PROMPT,
+    COMMERCIAL_ANALYST_SYSTEM_PROMPT,
+    COMMERCIAL_ANALYST_USER_PROMPT,
+    FUNDS_ANALYST_SYSTEM_PROMPT,
+    FUNDS_ANALYST_USER_PROMPT,
+    TAX_ANALYST_SYSTEM_PROMPT,
+    TAX_ANALYST_USER_PROMPT,
     VALIDATE_SUBAGENT_SYSTEM_PROMPT,
     VALIDATE_SUBAGENT_USER_PROMPT,
 )
@@ -127,4 +133,32 @@ class ValidateSubAgent(BaseSubAgent):
     STEP_CONTENT = 'Step 4: Verify source status, effective dates and amendment lineage'
     SYSTEM_PROMPT = VALIDATE_SUBAGENT_SYSTEM_PROMPT
     USER_PROMPT = VALIDATE_SUBAGENT_USER_PROMPT
+
+
+class TaxPolicyAnalystSubAgent(BaseSubAgent):
+    """Tax policy specialist: withholding, income tax, GST/VAT, treaty relief."""
+
+    SUBAGENT_NAME = 'tax_policy_analyst'
+    STEP_CONTENT = 'Step 5: Analyze tax treatment per the routing result'
+    SYSTEM_PROMPT = TAX_ANALYST_SYSTEM_PROMPT
+    USER_PROMPT = TAX_ANALYST_USER_PROMPT
+
+
+class FundsComplianceAnalystSubAgent(BaseSubAgent):
+    """Funds compliance specialist: FX, AML/KYC, sanctions, payment licensing."""
+
+    SUBAGENT_NAME = 'funds_compliance_analyst'
+    STEP_CONTENT = 'Step 5: Analyze funds compliance per the routing result'
+    SYSTEM_PROMPT = FUNDS_ANALYST_SYSTEM_PROMPT
+    USER_PROMPT = FUNDS_ANALYST_USER_PROMPT
+
+
+class CommercialLawAnalystSubAgent(BaseSubAgent):
+    """Commercial law specialist: formation, share transfer, contracts, licenses."""
+
+    SUBAGENT_NAME = 'commercial_law_analyst'
+    STEP_CONTENT = 'Step 5: Analyze corporate and commercial law per the routing result'
+    SYSTEM_PROMPT = COMMERCIAL_ANALYST_SYSTEM_PROMPT
+    USER_PROMPT = COMMERCIAL_ANALYST_USER_PROMPT
+
 
