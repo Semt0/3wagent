@@ -1,14 +1,14 @@
-"""Shared path and parameter helpers for the file tools.
+"""Shared path and parameter helpers for the refactored runtime.
 
-All tools take paths relative to the project root; resolution and
-confinement live here so every tool enforces the same boundary.
+All tools take paths relative to ``src``; resolution and confinement live
+here so the new runtime remains independent from the legacy repository tree.
 """
 
 from pathlib import Path
 
 import json5
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 
 def parse_tool_params(params) -> dict:
@@ -23,14 +23,14 @@ def parse_tool_params(params) -> dict:
     if isinstance(parsed, str):
         parsed = json5.loads(parsed)
     if not isinstance(parsed, dict):
-        raise ValueError("arguments must be a JSON object")
+        raise TypeError("arguments must be a JSON object")
     return parsed
 
 
 def resolve_project_path(file_path: str) -> Path:
-    """Resolve a project-root-relative path and confine it to the project root.
+    """Resolve an src-root-relative path and confine it to the runtime root.
 
-    Raises ValueError if the resolved path escapes the project root.
+    Raises ValueError if the resolved path escapes the runtime root.
     """
     path = (PROJECT_ROOT / file_path.strip()).resolve()
     path.relative_to(PROJECT_ROOT)

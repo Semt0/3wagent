@@ -6,14 +6,16 @@ from qwen_agent.agents import FnCallAgent
 from qwen_agent.llm import BaseChatModel
 from qwen_agent.llm.schema import  Message, ASSISTANT
 
-from src.agent.attachments import inline_uploaded_files
+from src.agent.attachments import inline_uploaded_files, supported_formats_hint
 from src.config.llm import load_llm_config
 from src.config.webui import WEBUI_CHATBOT_CONFIG
 from src.prompts.prompts import MAIN_AGENT_SYS_PROMPT
+from src.tools.read_attachment import AttachmentReadTool  # noqa: F401
 from src.tools.read_markdown_files import MarkDownReadTool  # noqa: F401
 from src.tools.read_yaml_files import YamlReadTool  # noqa: F401
 from src.tools.write_result import WriteResult
-from src.tools.searxng_search import SearxngSearchTool  # noqa: F401
+from src.tools.web_fetch import WebFetchTool  # noqa: F401
+from src.tools.web_search import WebSearchTool  # noqa: F401
 from src.agent.subagent import *
 from src.config.logger import attach_run_log
 from src.config.runtime import get_run_dir, get_subagents_dir, new_run_id
@@ -43,8 +45,9 @@ class MainAgent(FnCallAgent):
         self,
         llm: Optional[Union[Dict, BaseChatModel]] = None,
     ):
-        tools = ['MarkDownReadTool', 'YamlReadTool', "WriteResult"]
-        rag_tools = tools + ['SearxngSearchTool']
+        tools = ['MarkDownReadTool', 'YamlReadTool', 'AttachmentReadTool', "WriteResult"]
+        retrieval_tools = tools + ['WebSearchTool', 'WebFetchTool']
+        verification_tools = tools + ['WebSearchTool', 'WebFetchTool']
         super().__init__(
             llm=llm,
             function_list=tools,
@@ -53,15 +56,17 @@ class MainAgent(FnCallAgent):
             description='跨境政策合规分析助手：资金合规、税务、民商法多领域协同分析。',
         )
         self.routing_agent = RoutingSubAgent(function_list=tools, llm=llm)
-        self.rag_agent = RagSubAgent(function_list=rag_tools, llm=llm)
-        self.validate_agent = ValidateSubAgent(function_list=rag_tools, llm=llm)
-        self.citation_verifier = CitationVerifierSubAgent(function_list=rag_tools, llm=llm)
+        self.rag_agent = RagSubAgent(function_list=retrieval_tools, llm=llm)
+        self.validate_agent = ValidateSubAgent(function_list=verification_tools, llm=llm)
+        self.citation_verifier = CitationVerifierSubAgent(
+            function_list=verification_tools, llm=llm
+        )
         self.report_writer = ReportWritingSubAgent(function_list=tools, llm=llm)
         # Domain analysts, selected per routing result (see _select_analysts)
         self.analysts = {
-            'tax': TaxPolicyAnalystSubAgent(function_list=rag_tools, llm=llm),
-            'funds': FundsComplianceAnalystSubAgent(function_list=rag_tools, llm=llm),
-            'commercial': CommercialLawAnalystSubAgent(function_list=rag_tools, llm=llm),
+            'tax': TaxPolicyAnalystSubAgent(function_list=tools, llm=llm),
+            'funds': FundsComplianceAnalystSubAgent(function_list=tools, llm=llm),
+            'commercial': CommercialLawAnalystSubAgent(function_list=tools, llm=llm),
         }
         # Functional subagent for policy-question detection (clean context)
         self.mode_detector = ModeDetector(llm = llm, function_list=tools)
@@ -75,6 +80,25 @@ class MainAgent(FnCallAgent):
         lang: Literal['en', 'zh'] = 'en',
         **kwargs,
     ) -> Iterator[List[Message]]:
+        # Resolve attachments FIRST: an unreadable-only upload blocks the run
+        # regardless of mode (and never reaches mode detection or the LLM).
+        # Resolving the original messages[-1] (not a copy) is safe here: the
+        # workflow below deep-copies messages AFTER inlining, so sub-agents
+        # receive the resolved content.
+        attachment_resolution = inline_uploaded_files(messages[-1])
+        if attachment_resolution.should_block:
+            yield [
+                Message(
+                    role='assistant',
+                    content=(
+                        '暂时无法读取你上传的附件。'
+                        f'当前支持的格式：{supported_formats_hint()}。'
+                        '或者在消息中补充具体问题后重试。'
+                    ),
+                )
+            ]
+            return
+
         # Start a new run: all artifacts go under workspace/<run_id>/
         new_run_id()
         attach_run_log(getattr(self.llm, 'model', 'model') or 'model')
@@ -119,22 +143,9 @@ class MainAgent(FnCallAgent):
         **kwargs,
     ) -> Iterator[List[Message]]:
         # DeepCopy, Empty Previous Response
+        # (attachments were already resolved and inlined in _run above)
         new_messages = copy.deepcopy(messages)
         response = []
-
-        ### Step 1: Resolve the attached files
-        attachment_resolution = inline_uploaded_files(messages[-1])
-        if attachment_resolution.should_block:
-            yield [
-                Message(
-                    role='assistant',
-                    content=(
-                        '暂时无法读取你上传的附件。请上传 Markdown、TXT 或 YAML 文件，'
-                        '或者在消息中补充具体问题后重试。'
-                    ),
-                )
-            ]
-            return
 
         ### SubAgents WorkMode:
         ### SubAgent takes the previous whole messages history as input, as well as its own system prompt and user instruction
@@ -215,12 +226,18 @@ class MainAgent(FnCallAgent):
             selected = []
         return selected or [self.analysts['tax']]
 
-def run_3wagent(model_name):
+def run_3wagent(model_name=None, provider=None, config_path=None):
     # Imported lazily so headless usage/tests don't require qwen-agent[gui]
     from src.agent.webui import ThemedWebUI
 
     # Define Agent
-    bot = MainAgent(llm = load_llm_config(model_name=model_name))
+    bot = MainAgent(
+        llm=load_llm_config(
+            model_name=model_name,
+            provider=provider,
+            config_path=config_path,
+        )
+    )
 
     # Run The GUI Agent
     ThemedWebUI(

@@ -75,11 +75,11 @@ The project therefore does not maintain its own FastAPI / LangChain / LangGraph 
 An experimental refactored runtime lives under `src/`, based on [qwen-agent](https://github.com/QwenLM/qwen-agent) instead of LangChain. It is an early scaffold that runs alongside the Claude Code architecture described above:
 
 - `MainAgent(FnCallAgent)` with qwen-agent's built-in Gradio WebUI
-- OpenAI-compatible local model endpoint (llama-server via SSH tunnel, model selectable with `-m`)
+- OpenAI-compatible model providers (DeepSeek, Kimi, or llama-server via SSH tunnel)
 - Native `@register_tool` function calling (currently markdown / YAML file readers)
 - The domain rules from `.claude/CLAUDE.md` and `config/*.yaml` are reused as-is
 
-The planned multi-agent pipeline (parsing → routing → RAG → validity → analysis → citation verification → report writing) is not implemented yet. See [src/README.md](src/README.md) for details and run instructions.
+The planned multi-agent pipeline (parsing → routing → RAG → validity → analysis → citation verification → report writing) is not implemented yet. See [src/README.md](src/README.md) for provider configuration and run instructions.
 
 ---
 
