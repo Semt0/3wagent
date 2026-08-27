@@ -20,7 +20,8 @@ src/
 │   ├── main_agent.py       # MainAgent(FnCallAgent) 与子 agent 流水线编排
 │   └── subagent.py         # Routing/RAG/Validate/Analyst/Citation/Writer 子 agent
 ├── config/
-│   ├── llm.py              # LLM 连接配置（BASIC_CONFIG 模板 + load_llm_config）
+│   ├── llm.py              # LLM provider 配置加载器
+│   ├── llm.yaml            # DeepSeek / Kimi / local provider 配置
 │   ├── webui.py            # Gradio WebUI 的 chatbot 配置（prompt 建议）
 │   ├── logger.py           # DEBUG 模式文件日志，写 src/workspace/logs/<model><ts>.log
 │   └── *.yaml              # 路由、法域、来源等级与输出契约
@@ -46,9 +47,11 @@ src/
 ## 运行方式
 
 ```bash
-# 在项目根目录（src/ 的上一级）执行
-python -m src.main                 # 默认模型 finance-27b
-python -m src.main -m <model-name> # 切换 llama-server 上挂载的其他模型
+# 在项目根目录（src/ 的上一级）执行；默认使用 src/config/llm.yaml 的 local
+python -m src.main
+python -m src.main --provider deepseek
+python -m src.main --provider kimi
+python -m src.main --provider local --model <model-name>
 python -m src.main -d              # DEBUG 模式，日志写入 src/workspace/logs/
 ```
 
@@ -56,7 +59,32 @@ python -m src.main -d              # DEBUG 模式，日志写入 src/workspace/l
 内置的 Gradio WebUI。程序退出时会关闭本次启动的 daemon；如果 daemon
 原本已经运行，则只复用、不关闭。
 
-### 推荐部署方式：远程 LLM + 本地 Agent
+### 外部模型 API + 本地 Agent
+
+`src/config/llm.yaml` 是 LLM provider 的配置入口，当前内置 `deepseek`、
+`kimi` 和原有的 `local` 三个配置。DeepSeek 与 Kimi 都使用 OpenAI-compatible
+Chat Completions 接口；API key 只从环境变量读取，不应写进 YAML 或提交到 Git。
+
+先设置对应密钥：
+
+```bash
+export DEEPSEEK_API_KEY="你的 DeepSeek API key"
+# 或：export MOONSHOT_API_KEY="你的 Kimi API key"
+```
+
+然后启动：
+
+```bash
+python -m src.main --provider deepseek
+python -m src.main --provider kimi
+python -m src.main --llm-config path/to/my-llm.yaml --provider my-provider
+```
+
+如需换模型，可以用 `--model` 覆盖 YAML 中的模型名；如需新增 provider，复制
+`llm.yaml` 中的一个 provider，修改 `model`、`model_server` 和 `api_key_env` 即可。
+如果不想修改仓库内的默认文件，可用 `--llm-config path/to/my-llm.yaml` 指向自己的配置。
+
+### 远程部署模型 + 本地 Agent（兼容保留）
 
 LLM 推理服务可以运行在远程 GPU 服务器，Agent、Gradio WebUI 和 Web
 Search 运行在本地。推荐启动顺序如下。
@@ -125,13 +153,17 @@ Web Search 使用独立的本地 `open-websearch` daemon。安装与启动方法
 
 ### LLM 配置
 
-`config/llm.py` 中只有一个 OpenAI 兼容端点模板：
+LLM 配置位于 `src/config/llm.yaml`，由 `src/config/llm.py` 加载。provider 的结构为：
 
-- `model_server`: `http://127.0.0.1:11434/v1`（远程 llama-server 经 SSH 隧道转发到本地）
-- `api_key`: `"EMPTY"`
-- `generate_cfg`: `temperature: 0.15, top_p: 0.85`
+- `model`: 服务商要求的模型 ID
+- `model_server`: OpenAI-compatible base URL
+- `api_key_env`: 存放密钥的环境变量名
+- `generate_cfg`: qwen-agent 的生成参数
 
-`load_llm_config(model_name)` 深拷贝模板并填入模型名。暂不支持多 provider；"多模型"仅靠 `-m` 参数切换模型名。
+不同服务商对生成参数的约束可能不同；例如内置 Kimi K2.5 配置默认不额外传递
+`temperature` 和 `top_p`。
+
+也可以设置 `LLM_PROVIDER=kimi`，作为 `--provider` 之外的环境变量方式。
 
 ## 架构要点
 

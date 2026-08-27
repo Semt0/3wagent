@@ -1,0 +1,30 @@
+# LLM providers for the qwen-agent runtime.
+#
+# Keep API keys out of this file.  Providers with `api_key_env` read the key
+# from the process environment at startup.
+default_provider: local
+
+providers:
+  deepseek:
+    model: deepseek-v4-flash
+    model_server: https://api.deepseek.com
+    api_key_env: DEEPSEEK_API_KEY
+    generate_cfg:
+      temperature: 0.15
+      top_p: 0.85
+
+  kimi:
+    model: kimi-k2.5
+    model_server: https://api.moonshot.cn/v1
+    api_key_env: MOONSHOT_API_KEY
+    # Kimi K2.5 constrains temperature/top_p; leave generation defaults intact.
+    generate_cfg: {}
+
+  # Existing setup: a llama-server endpoint reached through an SSH tunnel.
+  local:
+    model: finance-27b
+    model_server: http://127.0.0.1:11434/v1
+    api_key: EMPTY
+    generate_cfg:
+      temperature: 0.15
+      top_p: 0.85

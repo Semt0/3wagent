@@ -164,12 +164,18 @@ class MainAgent(FnCallAgent):
             selected.append(self.analysts['commercial'])
         return selected or [self.analysts['tax']]
 
-def run_3wagent(model_name):
+def run_3wagent(model_name=None, provider=None, config_path=None):
     # Imported lazily so headless usage/tests don't require qwen-agent[gui]
     from src.agent.webui import ThemedWebUI
 
     # Define Agent
-    bot = MainAgent(llm = load_llm_config(model_name=model_name))
+    bot = MainAgent(
+        llm=load_llm_config(
+            model_name=model_name,
+            provider=provider,
+            config_path=config_path,
+        )
+    )
 
     # Run The GUI Agent
     ThemedWebUI(
