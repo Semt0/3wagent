@@ -27,3 +27,8 @@ viewer/reports.json
 
 # workspace
 workspace/
+
+# Reference archives kept on disk but out of version control
+docs/
+examples/
+.claude/

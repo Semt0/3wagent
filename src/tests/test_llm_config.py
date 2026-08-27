@@ -7,7 +7,7 @@ import pytest
 from src.config.llm import available_providers, load_llm_config
 
 
-CONFIG_PATH = Path(__file__).parents[1] / "src" / "config" / "llm.yaml"
+CONFIG_PATH = Path(__file__).parents[1] / "config" / "llm.yaml"
 
 
 def test_builtin_providers_are_available():

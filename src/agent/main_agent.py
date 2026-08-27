@@ -1,9 +1,10 @@
 from typing import Dict, Iterator, List, Literal, Optional, Union
 import copy
+from enum import Enum
 
 from qwen_agent.agents import FnCallAgent
 from qwen_agent.llm import BaseChatModel
-from qwen_agent.llm.schema import ContentItem, Message, USER, ASSISTANT
+from qwen_agent.llm.schema import  Message, ASSISTANT
 
 from src.agent.attachments import inline_uploaded_files, supported_formats_hint
 from src.config.llm import load_llm_config
@@ -15,23 +16,29 @@ from src.tools.read_yaml_files import YamlReadTool  # noqa: F401
 from src.tools.write_result import WriteResult
 from src.tools.web_fetch import WebFetchTool  # noqa: F401
 from src.tools.web_search import WebSearchTool  # noqa: F401
-from src.agent.subagent import (
-    CitationVerifierSubAgent,
-    CommercialLawAnalystSubAgent,
-    FundsComplianceAnalystSubAgent,
-    RagSubAgent,
-    ReportWritingSubAgent,
-    RoutingSubAgent,
-    TaxPolicyAnalystSubAgent,
-    ValidateSubAgent,
-)
-from src.tools.common import PROJECT_ROOT
+from src.agent.subagent import *
+from src.config.logger import attach_run_log
+from src.config.runtime import get_run_dir, get_subagents_dir, new_run_id
+
+
+class AgentMode(Enum):
+    """Top-level modes of the main agent.
+
+    NORMAL: casual Q&A, answer directly.
+    WORKING: a policy question is being processed by the workflow.
+
+    Future extensions: per-subagent states, failure rollback to NORMAL,
+    redo requests back to an earlier subagent.
+    """
+    NORMAL = 'normal'
+    WORKING = 'working'
 
 
 class MainAgent(FnCallAgent):
     """Customize the main agent to resolve policy problem
-    Current Design Plan: Automaton Design???
-    Need Further Discussion
+
+    Two modes (AgentMode): NORMAL for casual Q&A, WORKING for the policy
+    research workflow. Mode detection is delegated to a FunctionalSubAgent.
     """
 
     def __init__(
@@ -61,6 +68,11 @@ class MainAgent(FnCallAgent):
             'funds': FundsComplianceAnalystSubAgent(function_list=tools, llm=llm),
             'commercial': CommercialLawAnalystSubAgent(function_list=tools, llm=llm),
         }
+        # Functional subagent for policy-question detection (clean context)
+        self.mode_detector = ModeDetector(llm = llm, function_list=tools)
+        # Functional subagent for analyst selection from the routing result
+        self.analysts_selector = AnalystsSelector(llm = llm, function_list=tools)
+        self.mode = AgentMode.NORMAL
 
     def _run(
         self,
@@ -68,15 +80,12 @@ class MainAgent(FnCallAgent):
         lang: Literal['en', 'zh'] = 'en',
         **kwargs,
     ) -> Iterator[List[Message]]:
-        # DeepCopy, Empty Previous Response
-        new_messages = copy.deepcopy(messages)
-        response = []
-
-        ### Step 1: Resolve the attached files
-        # Resolve on the COPY: inline_uploaded_files mutates message.content in
-        # place, and all sub-agents below consume new_messages. Resolving the
-        # original messages[-1] would leave sub-agents with raw file references.
-        attachment_resolution = inline_uploaded_files(new_messages[-1])
+        # Resolve attachments FIRST: an unreadable-only upload blocks the run
+        # regardless of mode (and never reaches mode detection or the LLM).
+        # Resolving the original messages[-1] (not a copy) is safe here: the
+        # workflow below deep-copies messages AFTER inlining, so sub-agents
+        # receive the resolved content.
+        attachment_resolution = inline_uploaded_files(messages[-1])
         if attachment_resolution.should_block:
             yield [
                 Message(
@@ -89,6 +98,54 @@ class MainAgent(FnCallAgent):
                 )
             ]
             return
+
+        # Start a new run: all artifacts go under workspace/<run_id>/
+        new_run_id()
+        attach_run_log(getattr(self.llm, 'model', 'model') or 'model')
+
+        # Mode transition: NORMAL -> WORKING when a policy question is detected.
+        # (Detection is skipped while WORKING; the workflow finishes within one
+        # _run call, and failures also fall back to NORMAL via the finally below.)
+        if self.mode == AgentMode.NORMAL and self._is_policy_question(messages[-1]):
+            self.mode = AgentMode.WORKING
+
+        if self.mode == AgentMode.WORKING:
+            try:
+                yield from self._run_workflow(messages, lang=lang, **kwargs)
+            finally:
+                self.mode = AgentMode.NORMAL
+        else:
+            yield from super()._run(messages=messages, lang=lang, **kwargs)
+
+    # Check if the user last question is a policy question
+    def _is_policy_question(self, last_message: Message) -> bool:
+        """Ask the functional subagent whether this input is a policy question."""
+        content = last_message.get('content')
+        if isinstance(content, list):
+            question = ''.join(item.get('text') or '' for item in content)
+        else:
+            question = str(content or '')
+        if not question.strip():
+            return False
+        result_path = get_run_dir() / 'mode_detection.json'
+        result = self.mode_detector.run_task(input_text = question , output_path = result_path)
+
+        # type check
+        assert "is_policy_question" in result
+        assert isinstance(result["is_policy_question"], bool)
+
+        return result["is_policy_question"]
+
+    def _run_workflow(
+        self,
+        messages: List[Message],
+        lang: Literal['en', 'zh'] = 'en',
+        **kwargs,
+    ) -> Iterator[List[Message]]:
+        # DeepCopy, Empty Previous Response
+        # (attachments were already resolved and inlined in _run above)
+        new_messages = copy.deepcopy(messages)
+        response = []
 
         ### SubAgents WorkMode:
         ### SubAgent takes the previous whole messages history as input, as well as its own system prompt and user instruction
@@ -153,20 +210,20 @@ class MainAgent(FnCallAgent):
             yield response + rsp
 
     def _select_analysts(self):
-        """Pick domain analysts by keyword-matching the routing result.
+        """Pick domain analysts by asking the analysts_selector functional
+        subagent to judge the routing result.
 
-        Falls back to the tax analyst when nothing matches (tax is the most
-        common primary domain for the covered issue types).
+        Falls back to the tax analyst on any failure or empty selection
+        (tax is the most common primary domain for the covered issue types).
         """
-        result_path = PROJECT_ROOT / 'workspace' / 'sub_agents' / 'routing_subagent_result.md'
-        text = result_path.read_text(encoding='utf-8').lower() if result_path.exists() else ''
-        selected = []
-        if any(k in text for k in ('funds', '外汇', '资金合规', 'aml', '制裁')):
-            selected.append(self.analysts['funds'])
-        if any(k in text for k in ('tax', '税务', '预提', '增值税', '所得税')):
-            selected.append(self.analysts['tax'])
-        if any(k in text for k in ('commercial', '民商', '公司设立', '股权')):
-            selected.append(self.analysts['commercial'])
+        routing_result_path = get_subagents_dir() / 'routing_subagent_result.md'
+        routing_result = routing_result_path.read_text(encoding='utf-8') if routing_result_path.exists() else ''
+        selection_path = get_run_dir() / 'analyst_selection.json'
+        try:
+            result = self.analysts_selector.run_task(input_text=routing_result, output_path=selection_path)
+            selected = [self.analysts[name] for name in result.get('analysts', []) if name in self.analysts]
+        except Exception:
+            selected = []
         return selected or [self.analysts['tax']]
 
 def run_3wagent(model_name=None, provider=None, config_path=None):

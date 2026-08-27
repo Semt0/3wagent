@@ -6,6 +6,7 @@ sub-agents only declare identity and prompts as class attributes.
 """
 
 import copy
+import json5
 from datetime import date
 from typing import Dict, Iterator, List, Optional, Union
 
@@ -14,25 +15,8 @@ from qwen_agent.llm import BaseChatModel
 from qwen_agent.llm.schema import ASSISTANT, USER, Message
 from qwen_agent.tools import BaseTool
 
-from src.prompts.prompts import (
-    MAIN_AGENT_BACK_PROMPT_TEMPLATE,
-    RAG_SUBAGENT_SYSTEM_PROMPT,
-    RAG_SUBAGENT_USER_PROMPT,
-    ROUTING_SUBAGENT_SYSTEM_PROMPT,
-    ROUTING_SUBAGENT_USER_PROMPT,
-    COMMERCIAL_ANALYST_SYSTEM_PROMPT,
-    COMMERCIAL_ANALYST_USER_PROMPT,
-    FUNDS_ANALYST_SYSTEM_PROMPT,
-    FUNDS_ANALYST_USER_PROMPT,
-    TAX_ANALYST_SYSTEM_PROMPT,
-    TAX_ANALYST_USER_PROMPT,
-    VALIDATE_SUBAGENT_SYSTEM_PROMPT,
-    VALIDATE_SUBAGENT_USER_PROMPT,
-    VERIFY_CITATION_SUBAGENT_SYSTEM_PROMPT,
-    VERIFY_CITATION_SUBAGENT_USER_PROMPT,
-    REPORT_WRITING_SUBAGENT_SYSTEM_PROMPT,
-    REPORT_WRITING_SUBAGENT_USER_PROMPT,
-)
+from src.prompts.prompts import *
+from src.config.runtime import get_run_dir_relative, get_subagents_dir
 from src.tools.common import PROJECT_ROOT
 
 # Import tools so their @register_tool side effects run (string refs in function_list)
@@ -72,7 +56,9 @@ class BaseSubAgent(FnCallAgent):
 
         # New system prompt for the subagent.
         # Role is ASSISTANT because SYSTEM must stay unique at position 0.
-        new_messages.append(Message(ASSISTANT, self.SYSTEM_PROMPT))
+        # <RUN_DIR> is filled at runtime so result files land in the current run's directory.
+        system_prompt = self.SYSTEM_PROMPT.replace('<RUN_DIR>', str(get_run_dir_relative()))
+        new_messages.append(Message(ASSISTANT, system_prompt))
 
         # User prompt to activate the task (with the real date so the model
         # never has to guess it)
@@ -88,7 +74,7 @@ class BaseSubAgent(FnCallAgent):
 
         Falls back to the sub-agent's final reply if the result file is missing.
         """
-        result_path = PROJECT_ROOT / 'workspace' / 'sub_agents' / f'{self.SUBAGENT_NAME}_result.md'
+        result_path = get_subagents_dir() / f'{self.SUBAGENT_NAME}_result.md'
         if result_path.exists():
             result = result_path.read_text(encoding='utf-8')
         else:
@@ -186,3 +172,63 @@ class ReportWritingSubAgent(BaseSubAgent):
     SYSTEM_PROMPT = REPORT_WRITING_SUBAGENT_SYSTEM_PROMPT
     USER_PROMPT = REPORT_WRITING_SUBAGENT_USER_PROMPT
 
+
+class FunctionalSubAgent(FnCallAgent):
+    """Generic single-shot functional base subagent.
+
+    Accuracy comes from context cleanliness. Each
+    run_task call is one-shot.
+
+    Current usage example: policy-question detection, routing-result analyst selection.
+    """
+    OUTPUT_SPEC = ""
+    RESULT_TYPE = None
+
+    def __init__(
+        self,
+        function_list: Optional[List[Union[str, Dict, BaseTool]]] = None,
+        llm: Optional[Union[Dict, BaseChatModel]] = None,
+        **kwargs,
+    ):
+        super().__init__(
+            llm=llm,
+            system_message=FUNCTIONAL_SUBAGENT_SYSTEM_PROMPT,
+            function_list=function_list,
+             **kwargs
+        )
+
+    def run_task(self, input_text, output_path):
+        """Run once with a clean context; the model writes the formatted output.
+
+        """
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+
+        user_prompt = FUNCTIONAL_TASK_USER_PROMPT_TEMPLATE.format(
+            input_text = input_text,
+            output_spec = self.OUTPUT_SPEC,
+            # Model-facing paths stay relative to the project root, matching
+            # the path convention of all other tools.
+            output_path = output_path.relative_to(PROJECT_ROOT)
+        )
+
+        # User message run
+        for _ in self.run([Message(USER, user_prompt)]):
+            pass
+        result = json5.loads(output_path.read_text(encoding = "utf-8"))
+        
+        # Check the result type
+        assert(isinstance(result, self.RESULT_TYPE))
+
+        return result
+
+class ModeDetector(FunctionalSubAgent):
+    """ Mode Detector:
+    """
+    OUTPUT_SPEC = MODE_DETECTION_OUTPUT_SPEC
+    RESULT_TYPE = Dict
+
+class AnalystsSelector(FunctionalSubAgent):
+    """ Analysts Selector: pick domain analysts from the routing result.
+    """
+    OUTPUT_SPEC = ANALYST_SELECTION_OUTPUT_SPEC
+    RESULT_TYPE = Dict

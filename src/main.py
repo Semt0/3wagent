@@ -3,7 +3,6 @@ import argparse
 from qwen_agent.log import logger
 
 from src.agent.main_agent import run_3wagent
-from src.config.logger import SetUpHandler
 from src.websearch.supervisor import OpenWebSearchSupervisor
 
 
@@ -25,10 +24,9 @@ def parse_args():
 def main():
     args = parse_args()
 
-    # DEBUG Mode
+    # DEBUG Mode; the per-run log file is attached at the start of each run
     if args.DEBUG :
         logger.setLevel('DEBUG')
-        logger.addHandler(SetUpHandler(args.model or args.provider or "llm"))
 
     with OpenWebSearchSupervisor():
         run_3wagent(
