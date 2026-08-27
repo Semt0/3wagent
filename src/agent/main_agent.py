@@ -5,10 +5,11 @@ from qwen_agent.agents import FnCallAgent
 from qwen_agent.llm import BaseChatModel
 from qwen_agent.llm.schema import ContentItem, Message, USER, ASSISTANT
 
-from src.agent.attachments import inline_uploaded_files
+from src.agent.attachments import inline_uploaded_files, supported_formats_hint
 from src.config.llm import load_llm_config
 from src.config.webui import WEBUI_CHATBOT_CONFIG
 from src.prompts.prompts import MAIN_AGENT_SYS_PROMPT
+from src.tools.read_attachment import AttachmentReadTool  # noqa: F401
 from src.tools.read_markdown_files import MarkDownReadTool  # noqa: F401
 from src.tools.read_yaml_files import YamlReadTool  # noqa: F401
 from src.tools.write_result import WriteResult
@@ -37,7 +38,7 @@ class MainAgent(FnCallAgent):
         self,
         llm: Optional[Union[Dict, BaseChatModel]] = None,
     ):
-        tools = ['MarkDownReadTool', 'YamlReadTool', "WriteResult"]
+        tools = ['MarkDownReadTool', 'YamlReadTool', 'AttachmentReadTool', "WriteResult"]
         retrieval_tools = tools + ['WebSearchTool', 'WebFetchTool']
         verification_tools = tools + ['WebSearchTool', 'WebFetchTool']
         super().__init__(
@@ -72,13 +73,17 @@ class MainAgent(FnCallAgent):
         response = []
 
         ### Step 1: Resolve the attached files
-        attachment_resolution = inline_uploaded_files(messages[-1])
+        # Resolve on the COPY: inline_uploaded_files mutates message.content in
+        # place, and all sub-agents below consume new_messages. Resolving the
+        # original messages[-1] would leave sub-agents with raw file references.
+        attachment_resolution = inline_uploaded_files(new_messages[-1])
         if attachment_resolution.should_block:
             yield [
                 Message(
                     role='assistant',
                     content=(
-                        '暂时无法读取你上传的附件。请上传 Markdown、TXT 或 YAML 文件，'
+                        '暂时无法读取你上传的附件。'
+                        f'当前支持的格式：{supported_formats_hint()}。'
                         '或者在消息中补充具体问题后重试。'
                     ),
                 )

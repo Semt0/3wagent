@@ -10,12 +10,21 @@ dependencies = [
     "soundfile>=0.12.0",
     "socksio>=1.0.0",
     "pyyaml>=6.0",
+    "pypdf>=4.0",
+    "pdfplumber>=0.11",
+    "openpyxl>=3.1",
+    "python-docx>=1.1",
 ]
 
 [project.optional-dependencies]
 dev = [
     "ruff>=0.5.0",
     "pytest>=8.0",
+]
+# Heavy PDF parsing (scans, multi-column, formulas) runs out-of-process:
+# deploy MinerU as a separate CLI/HTTP service instead of installing it here.
+legacy-excel = [
+    "xlrd>=2.0",
 ]
 
 [tool.ruff]
