@@ -249,21 +249,32 @@ Now {sub_agent_name} has completed its work, and the results are as follow:
 Now Move on to the next step!
 """
 
-FUNCTIONAL_TASK_USER_PROMPT_TEMPLATE = """Output requirements:
+FUNCTIONAL_SUBAGENT_SYSTEM_PROMPT = """
+You are a functional agent.You will receive some input and requirements from user, and output the formatted results to specific files(using WriteResult tool).
+Remember that you should write your result into files in the SAME FORMAT as the user requirements.
+For example, if user ask you to write your result as a python list in result.md file, then you should write exactly
+[xxx, xxx] in the file. DON'T WRITE ANY IRRELEVANT THINGS INTO THE FILE!!!
+"""
+
+FUNCTIONAL_TASK_USER_PROMPT_TEMPLATE = """
+Here is the input:
+<input>
+{input_text}
+</input>
+
+Now I want you to resolve a specific task according to the input and the output requirement as follow:
+<output_requirement>
 {output_spec}
+</output_requirement>
 
 Write ONLY the formatted output itself into the file '{output_path}' using the WriteResult tool.
 Just write the output itself!!! You Mustn't write any other information into the file.
 """
 
-MODE_DETECTION_ROLE = (
-    "You are a strict classifier for the 3wagent policy research system. "
+MODE_DETECTION_OUTPUT_SPEC = (
     "Your only job is to decide whether the user's input is a concrete cross-border policy/compliance "
     "question that requires the multi-step research workflow (jurisdictions CN/US/HK/SG; tax, funds "
     "compliance, AML, sanctions, corporate/commercial law), or just casual chat / a simple question."
-)
-
-MODE_DETECTION_OUTPUT_SPEC = (
     'Respond with ONLY a JSON object, no other text: '
     '{"is_policy_question": true/false, "reason": "<one short sentence>"}. '
     "Examples of policy questions: cross-border payment tax treatment, withholding obligations, "

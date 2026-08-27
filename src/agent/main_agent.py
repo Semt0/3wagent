@@ -1,32 +1,20 @@
 from typing import Dict, Iterator, List, Literal, Optional, Union
 import copy
-import json5
-import re
 from enum import Enum
 
 from qwen_agent.agents import FnCallAgent
 from qwen_agent.llm import BaseChatModel
-from qwen_agent.llm.schema import ContentItem, Message, USER, ASSISTANT
+from qwen_agent.llm.schema import  Message, ASSISTANT
 
 from src.agent.attachments import inline_uploaded_files
 from src.config.llm import load_llm_config
 from src.config.webui import WEBUI_CHATBOT_CONFIG
-from src.prompts.prompts import MAIN_AGENT_SYS_PROMPT, MODE_DETECTION_ROLE, MODE_DETECTION_OUTPUT_SPEC
+from src.prompts.prompts import MAIN_AGENT_SYS_PROMPT
 from src.tools.read_markdown_files import MarkDownReadTool  # noqa: F401
 from src.tools.read_yaml_files import YamlReadTool  # noqa: F401
 from src.tools.write_result import WriteResult
 from src.tools.searxng_search import SearxngSearchTool  # noqa: F401
-from src.agent.subagent import (
-    CitationVerifierSubAgent,
-    CommercialLawAnalystSubAgent,
-    FunctionalSubAgent,
-    FundsComplianceAnalystSubAgent,
-    RagSubAgent,
-    ReportWritingSubAgent,
-    RoutingSubAgent,
-    TaxPolicyAnalystSubAgent,
-    ValidateSubAgent,
-)
+from src.agent.subagent import *
 from src.config.logger import attach_run_log
 from src.config.runtime import get_run_dir, get_subagents_dir, new_run_id
 
@@ -76,7 +64,7 @@ class MainAgent(FnCallAgent):
             'commercial': CommercialLawAnalystSubAgent(function_list=rag_tools, llm=llm),
         }
         # Functional subagent for policy-question detection (clean context)
-        self.mode_detector = FunctionalSubAgent(role_prompt=MODE_DETECTION_ROLE, llm=llm)
+        self.mode_detector = ModeDetector(llm = llm, function_list=tools)
         self.mode = AgentMode.NORMAL
 
     def _run(
@@ -103,6 +91,7 @@ class MainAgent(FnCallAgent):
         else:
             yield from super()._run(messages=messages, lang=lang, **kwargs)
 
+    # Check if the user last question is a policy question
     def _is_policy_question(self, last_message: Message) -> bool:
         """Ask the functional subagent whether this input is a policy question."""
         content = last_message.get('content')
@@ -113,16 +102,13 @@ class MainAgent(FnCallAgent):
         if not question.strip():
             return False
         result_path = get_run_dir() / 'mode_detection.json'
-        fallback_text = self.mode_detector.run_task(question, MODE_DETECTION_OUTPUT_SPEC, result_path)
-        try:
-            # File-based protocol: the model writes the file via WriteResult;
-            # fall back to its final reply if it failed to write.
-            raw = result_path.read_text(encoding='utf-8') if result_path.exists() else fallback_text
-            match = re.search(r'\{.*\}', raw, re.S)
-            return bool(json5.loads(match.group(0)).get('is_policy_question'))
-        except Exception:
-            # Parse failure: stay in NORMAL (conservative)
-            return False
+        result = self.mode_detector.run_task(input_text = question , output_path = result_path)
+
+        # type check
+        assert "is_policy_question" in result
+        assert isinstance(result["is_policy_question"], bool)
+
+        return result["is_policy_question"]
 
     def _run_workflow(
         self,

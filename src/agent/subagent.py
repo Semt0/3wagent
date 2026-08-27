@@ -6,6 +6,7 @@ sub-agents only declare identity and prompts as class attributes.
 """
 
 import copy
+import json5
 from datetime import date
 from typing import Dict, Iterator, List, Optional, Union
 
@@ -14,26 +15,7 @@ from qwen_agent.llm import BaseChatModel
 from qwen_agent.llm.schema import ASSISTANT, USER, Message
 from qwen_agent.tools import BaseTool
 
-from src.prompts.prompts import (
-    FUNCTIONAL_TASK_USER_PROMPT_TEMPLATE,
-    MAIN_AGENT_BACK_PROMPT_TEMPLATE,
-    RAG_SUBAGENT_SYSTEM_PROMPT,
-    RAG_SUBAGENT_USER_PROMPT,
-    ROUTING_SUBAGENT_SYSTEM_PROMPT,
-    ROUTING_SUBAGENT_USER_PROMPT,
-    COMMERCIAL_ANALYST_SYSTEM_PROMPT,
-    COMMERCIAL_ANALYST_USER_PROMPT,
-    FUNDS_ANALYST_SYSTEM_PROMPT,
-    FUNDS_ANALYST_USER_PROMPT,
-    TAX_ANALYST_SYSTEM_PROMPT,
-    TAX_ANALYST_USER_PROMPT,
-    VALIDATE_SUBAGENT_SYSTEM_PROMPT,
-    VALIDATE_SUBAGENT_USER_PROMPT,
-    VERIFY_CITATION_SUBAGENT_SYSTEM_PROMPT,
-    VERIFY_CITATION_SUBAGENT_USER_PROMPT,
-    REPORT_WRITING_SUBAGENT_SYSTEM_PROMPT,
-    REPORT_WRITING_SUBAGENT_USER_PROMPT,
-)
+from src.prompts.prompts import *
 from src.config.runtime import get_run_dir_relative, get_subagents_dir
 from src.tools.common import PROJECT_ROOT
 
@@ -190,51 +172,56 @@ class ReportWritingSubAgent(BaseSubAgent):
     USER_PROMPT = REPORT_WRITING_SUBAGENT_USER_PROMPT
 
 
-class FunctionalSubAgent(BaseSubAgent):
-    """Generic single-shot functional subagent with a clean context.
+class FunctionalSubAgent(FnCallAgent):
+    """Generic single-shot functional base subagent.
 
-    Same mechanism as the workflow subagents (system prompt + activation
-    prompt + WriteResult tool, result consumed from a file), but receives NO
-    conversation history: accuracy comes from context cleanliness. Each
+    Accuracy comes from context cleanliness. Each
     run_task call is one-shot.
 
-    Current uses: policy-question detection, routing-result analyst selection.
+    Current usage example: policy-question detection, routing-result analyst selection.
     """
-
-    SUBAGENT_NAME = 'functional_subagent'
-    STEP_CONTENT = 'Functional task'
-    TOOLS = ['WriteResult']
+    OUTPUT_SPEC = ""
+    RESULT_TYPE = None
 
     def __init__(
         self,
-        role_prompt: str,
+        function_list: Optional[List[Union[str, Dict, BaseTool]]] = None,
         llm: Optional[Union[Dict, BaseChatModel]] = None,
         **kwargs,
     ):
-        self.SYSTEM_PROMPT = role_prompt
-        super().__init__(llm=llm, **kwargs)
+        super().__init__(
+            llm=llm,
+            system_message=FUNCTIONAL_SUBAGENT_SYSTEM_PROMPT,
+            function_list=function_list,
+             **kwargs
+        )
 
-    def run_task(self, input_text: str, output_spec: str, output_path) -> str:
+    def run_task(self, input_text, output_path):
         """Run once with a clean context; the model writes the formatted output.
 
-        Args:
-            input_text: the input to judge/transform.
-            output_spec: the formatted output requirements for the model.
-            output_path: file the model must write the output into (via the
-                WriteResult tool); consumers read the result from this file.
-
-        Returns the model's final reply as a fallback for when it failed to
-        write the file.
         """
         output_path.parent.mkdir(parents=True, exist_ok=True)
-        self.USER_PROMPT = FUNCTIONAL_TASK_USER_PROMPT_TEMPLATE.format(
-            output_spec=output_spec,
-            output_path=output_path.relative_to(PROJECT_ROOT),
+
+        user_prompt = FUNCTIONAL_TASK_USER_PROMPT_TEMPLATE.format(
+            input_text = input_text,
+            output_spec = self.OUTPUT_SPEC,
+            # Model-facing paths stay relative to the project root, matching
+            # the path convention of all other tools.
+            output_path = output_path.relative_to(PROJECT_ROOT)
         )
-        # The input goes first: chat APIs reject histories that start with an
-        # assistant message (the sub-agent system prompt is an ASSISTANT
-        # message in the BaseSubAgent protocol).
-        rsp: List[Message] = []
-        for rsp in self.run([Message(USER, input_text)]):
+
+        # User message run
+        for _ in self.run([Message(USER, user_prompt)]):
             pass
-        return self._last_output_text
+        result = json5.loads(output_path.read_text(encoding = "utf-8"))
+        
+        # Check the result type
+        assert(isinstance(result, self.RESULT_TYPE))
+
+        return result
+
+class ModeDetector(FunctionalSubAgent):
+    """ Mode Detector:
+    """
+    OUTPUT_SPEC = MODE_DETECTION_OUTPUT_SPEC
+    RESULT_TYPE = Dict
