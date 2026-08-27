@@ -12,7 +12,8 @@ from src.prompts.prompts import MAIN_AGENT_SYS_PROMPT
 from src.tools.read_markdown_files import MarkDownReadTool  # noqa: F401
 from src.tools.read_yaml_files import YamlReadTool  # noqa: F401
 from src.tools.write_result import WriteResult
-from src.tools.searxng_search import SearxngSearchTool  # noqa: F401
+from src.tools.web_fetch import WebFetchTool  # noqa: F401
+from src.tools.web_search import WebSearchTool  # noqa: F401
 from src.agent.subagent import (
     CitationVerifierSubAgent,
     CommercialLawAnalystSubAgent,
@@ -37,7 +38,8 @@ class MainAgent(FnCallAgent):
         llm: Optional[Union[Dict, BaseChatModel]] = None,
     ):
         tools = ['MarkDownReadTool', 'YamlReadTool', "WriteResult"]
-        rag_tools = tools + ['SearxngSearchTool']
+        retrieval_tools = tools + ['WebSearchTool', 'WebFetchTool']
+        verification_tools = tools + ['WebSearchTool', 'WebFetchTool']
         super().__init__(
             llm=llm,
             function_list=tools,
@@ -46,15 +48,17 @@ class MainAgent(FnCallAgent):
             description='跨境政策合规分析助手：资金合规、税务、民商法多领域协同分析。',
         )
         self.routing_agent = RoutingSubAgent(function_list=tools, llm=llm)
-        self.rag_agent = RagSubAgent(function_list=rag_tools, llm=llm)
-        self.validate_agent = ValidateSubAgent(function_list=rag_tools, llm=llm)
-        self.citation_verifier = CitationVerifierSubAgent(function_list=rag_tools, llm=llm)
+        self.rag_agent = RagSubAgent(function_list=retrieval_tools, llm=llm)
+        self.validate_agent = ValidateSubAgent(function_list=verification_tools, llm=llm)
+        self.citation_verifier = CitationVerifierSubAgent(
+            function_list=verification_tools, llm=llm
+        )
         self.report_writer = ReportWritingSubAgent(function_list=tools, llm=llm)
         # Domain analysts, selected per routing result (see _select_analysts)
         self.analysts = {
-            'tax': TaxPolicyAnalystSubAgent(function_list=rag_tools, llm=llm),
-            'funds': FundsComplianceAnalystSubAgent(function_list=rag_tools, llm=llm),
-            'commercial': CommercialLawAnalystSubAgent(function_list=rag_tools, llm=llm),
+            'tax': TaxPolicyAnalystSubAgent(function_list=tools, llm=llm),
+            'funds': FundsComplianceAnalystSubAgent(function_list=tools, llm=llm),
+            'commercial': CommercialLawAnalystSubAgent(function_list=tools, llm=llm),
         }
 
     def _run(

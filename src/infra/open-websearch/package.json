@@ -1,0 +1,12 @@
+{
+  "name": "3wagent-open-websearch-runtime",
+  "private": true,
+  "version": "0.0.0",
+  "scripts": {
+    "serve": "open-websearch serve --port 3210",
+    "status": "open-websearch status --base-url http://127.0.0.1:3210 --json"
+  },
+  "dependencies": {
+    "open-websearch": "2.1.11"
+  }
+}
