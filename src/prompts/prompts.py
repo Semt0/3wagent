@@ -282,3 +282,16 @@ MODE_DETECTION_OUTPUT_SPEC = (
     "Examples of NOT policy questions: greetings, definitions, questions about the system itself, "
     "requests to change code or config."
 )
+
+ANALYST_SELECTION_OUTPUT_SPEC = (
+    "Your only job is to decide which domain analyst(s) should analyze the issue, "
+    "based on the routing result provided as input. "
+    "Choose from exactly these analyst names: "
+    "'tax' (withholding, income tax, GST/VAT, treaty relief), "
+    "'funds' (FX, AML/KYC, sanctions, payment licensing), "
+    "'commercial' (company formation, share transfer, contracts, licenses). "
+    "Select every domain the issue involves (usually one or two). "
+    'Respond with ONLY a JSON object, no other text: '
+    '{"analysts": ["<name>", ...], "reason": "<one short sentence>"}. '
+    "The 'analysts' list must not be empty and must only contain the names listed above."
+)

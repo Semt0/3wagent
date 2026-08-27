@@ -225,3 +225,9 @@ class ModeDetector(FunctionalSubAgent):
     """
     OUTPUT_SPEC = MODE_DETECTION_OUTPUT_SPEC
     RESULT_TYPE = Dict
+
+class AnalystsSelector(FunctionalSubAgent):
+    """ Analysts Selector: pick domain analysts from the routing result.
+    """
+    OUTPUT_SPEC = ANALYST_SELECTION_OUTPUT_SPEC
+    RESULT_TYPE = Dict

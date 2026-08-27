@@ -65,6 +65,8 @@ class MainAgent(FnCallAgent):
         }
         # Functional subagent for policy-question detection (clean context)
         self.mode_detector = ModeDetector(llm = llm, function_list=tools)
+        # Functional subagent for analyst selection from the routing result
+        self.analysts_selector = AnalystsSelector(llm = llm, function_list=tools)
         self.mode = AgentMode.NORMAL
 
     def _run(
@@ -197,20 +199,20 @@ class MainAgent(FnCallAgent):
             yield response + rsp
 
     def _select_analysts(self):
-        """Pick domain analysts by keyword-matching the routing result.
+        """Pick domain analysts by asking the analysts_selector functional
+        subagent to judge the routing result.
 
-        Falls back to the tax analyst when nothing matches (tax is the most
-        common primary domain for the covered issue types).
+        Falls back to the tax analyst on any failure or empty selection
+        (tax is the most common primary domain for the covered issue types).
         """
-        result_path = get_subagents_dir() / 'routing_subagent_result.md'
-        text = result_path.read_text(encoding='utf-8').lower() if result_path.exists() else ''
-        selected = []
-        if any(k in text for k in ('funds', '外汇', '资金合规', 'aml', '制裁')):
-            selected.append(self.analysts['funds'])
-        if any(k in text for k in ('tax', '税务', '预提', '增值税', '所得税')):
-            selected.append(self.analysts['tax'])
-        if any(k in text for k in ('commercial', '民商', '公司设立', '股权')):
-            selected.append(self.analysts['commercial'])
+        routing_result_path = get_subagents_dir() / 'routing_subagent_result.md'
+        routing_result = routing_result_path.read_text(encoding='utf-8') if routing_result_path.exists() else ''
+        selection_path = get_run_dir() / 'analyst_selection.json'
+        try:
+            result = self.analysts_selector.run_task(input_text=routing_result, output_path=selection_path)
+            selected = [self.analysts[name] for name in result.get('analysts', []) if name in self.analysts]
+        except Exception:
+            selected = []
         return selected or [self.analysts['tax']]
 
 def run_3wagent(model_name):
