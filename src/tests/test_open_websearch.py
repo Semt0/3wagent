@@ -183,7 +183,7 @@ def test_jurisdiction_policy_and_official_domain_matching():
     policy = load_jurisdiction_search_policy("CN")
 
     assert policy is not None
-    assert policy.engines == ["baidu", "sogou", "bing"]
+    assert policy.engines == ["bing", "baidu", "sogou"]
     assert is_official_url("https://sub.safe.gov.cn/policy", policy.official_domains)
     assert not is_official_url("https://safe.gov.cn.example.com/fake", policy.official_domains)
 
@@ -325,3 +325,34 @@ def test_main_agent_assigns_web_tools_only_to_retrieval_and_verification(monkeyp
     for analyst in agent.analysts.values():
         assert expected_web_tools.isdisjoint(analyst.assigned_tools)
     assert expected_web_tools.isdisjoint(agent.report_writer.assigned_tools)
+
+
+def test_qwen_search_tool_enforces_run_budget(monkeypatch):
+    from src.config.runtime import new_run_id
+    from src.tools import web_search as web_search_module
+    from src.tools.web_search import WebSearchTool
+
+    monkeypatch.setenv("OPEN_WEBSEARCH_URL", "http://127.0.0.1:3210")
+    monkeypatch.setattr(web_search_module, "SEARCH_BUDGET_PER_RUN", 2)
+    new_run_id()
+    # run_id has 1-second resolution; another test may have spent budget under
+    # the same id, so start from a clean counter.
+    web_search_module._search_counts.clear()
+    tool = WebSearchTool()
+
+    class FakeClient:
+        def search(self, query, **kwargs):
+            return SearchResponse(
+                query=query,
+                engines=kwargs["engines"],
+                results=[SearchResult("IRS", "https://www.irs.gov/payments", "", "bing", "web")],
+            )
+
+    tool.client = FakeClient()
+    assert json.loads(tool.call({"query": "a", "jurisdiction": "US"}))["status"] == "ok"
+    assert json.loads(tool.call({"query": "b", "jurisdiction": "US"}))["status"] == "ok"
+
+    payload = json.loads(tool.call({"query": "c", "jurisdiction": "US"}))
+    assert payload["status"] == "error"
+    assert payload["error"]["code"] == "search_budget_exhausted"
+    assert "STOP searching" in payload["error"]["message"]

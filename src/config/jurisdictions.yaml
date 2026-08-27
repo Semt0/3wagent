@@ -7,7 +7,7 @@ jurisdictions:
     label_en: Mainland China
     label_zh: 中国内地
     web_search:
-      engines: [baidu, sogou, bing]
+      engines: [bing, baidu, sogou]
       official_domains:
         - npc.gov.cn
         - gov.cn
