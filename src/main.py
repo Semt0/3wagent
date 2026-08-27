@@ -4,6 +4,7 @@ from qwen_agent.log import logger
 
 from src.agent.main_agent import run_3wagent
 from src.config.logger import SetUpHandler
+from src.websearch.supervisor import OpenWebSearchSupervisor
 
 
 def parse_args():
@@ -21,7 +22,8 @@ def main():
         logger.setLevel('DEBUG')
         logger.addHandler(SetUpHandler(args.model))
 
-    run_3wagent(args.model)
+    with OpenWebSearchSupervisor():
+        run_3wagent(args.model)
 
 if __name__ == "__main__":
     main()

@@ -39,7 +39,8 @@ from src.tools.common import PROJECT_ROOT
 from src.tools.read_markdown_files import MarkDownReadTool  # noqa: F401
 from src.tools.read_yaml_files import YamlReadTool  # noqa: F401
 from src.tools.write_result import WriteResult  # noqa: F401
-from src.tools.searxng_search import SearxngSearchTool  # noqa: F401
+from src.tools.web_fetch import WebFetchTool  # noqa: F401
+from src.tools.web_search import WebSearchTool  # noqa: F401
 
 
 class BaseSubAgent(FnCallAgent):
@@ -184,5 +185,4 @@ class ReportWritingSubAgent(BaseSubAgent):
     STEP_CONTENT = 'Step 7: Write the final report per the output contract'
     SYSTEM_PROMPT = REPORT_WRITING_SUBAGENT_SYSTEM_PROMPT
     USER_PROMPT = REPORT_WRITING_SUBAGENT_USER_PROMPT
-
 

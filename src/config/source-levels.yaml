@@ -1,0 +1,30 @@
+# Source reliability levels — single source of truth for the S/A/B/C/D scale.
+# All agents and skills must reference this file instead of duplicating level definitions.
+
+levels:
+  - id: S
+    description_en: Laws, statutes, regulations and official legal databases
+    description_zh: 法律原文、法规、条例和官方法律数据库
+    can_support_final_conclusion: true
+
+  - id: A
+    description_en: Regulator guidance, tax authority guidance and official FAQs
+    description_zh: 监管机构指引、税局指引和官方 FAQ
+    can_support_final_conclusion: true
+
+  - id: B
+    description_en: Official circulars, announcements, cases and formal notices
+    description_zh: 官方通函、公告、判例和正式通知
+    can_support_final_conclusion: true
+
+  - id: C
+    description_en: Law firm, accounting firm, bank or professional institution briefings
+    description_zh: 律所、会计师事务所、银行或专业机构简报
+    can_support_final_conclusion: false
+    usage: lead only
+
+  - id: D
+    description_en: Public account posts, media articles and individual commentary
+    description_zh: 公众号、媒体文章和个人评论
+    can_support_final_conclusion: false
+    usage: lead only
