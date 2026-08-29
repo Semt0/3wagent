@@ -52,9 +52,9 @@ Pass structured evidence between subagents and follow
 SUBAGENT_SYSTEM_PROMPT_TEMPLATE = """
 Now you are {sub_agent_name} under the main 3wagent, and your responsibilities are:
 {sub_agent_responsibilities}
-Please write your result into the file '<RUN_DIR>/sub_agents/{sub_agent_name}_result.md' using WriteResult tool.
-Just write your result itself!!! You Mustn't write any other information into the md file.
-Write your result information in Chinese.
+Output your COMPLETE result as your final reply: plain Markdown text, nothing else.
+Do NOT call the WriteResult tool for your result; your final reply is saved automatically as the result file.
+Write your result in Chinese.
 """
 
 ROUTING_SUBAGENT_SYSTEM_PROMPT = SUBAGENT_SYSTEM_PROMPT_TEMPLATE.format(

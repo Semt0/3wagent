@@ -22,10 +22,13 @@ UNTRUSTED_CONTENT_NOTICE = (
     "official page and the project's source reliability rules."
 )
 
-# Hard cap on search calls per run. Without it, small models keep rephrasing
-# failed queries hundreds of times and get every free engine rate-limited.
-SEARCH_BUDGET_PER_RUN = 40
-_search_counts: dict[str, int] = {}
+# Hard cap on search calls per sub-agent run. Without it, small models keep
+# rephrasing failed queries hundreds of times and get every free engine
+# rate-limited. Each agent holds its own tool instance (qwen-agent builds one
+# per agent), so an instance counter gives every workflow step its own budget
+# and a heavy searcher cannot starve the steps after it. The counter resets
+# when the run_id changes.
+SEARCH_BUDGET_PER_AGENT = 15
 
 
 @register_tool("WebSearchTool")
@@ -63,6 +66,8 @@ class WebSearchTool(BaseTool):
         super().__init__(cfg)
         self.settings = WebSearchSettings.from_env()
         self.client = OpenWebSearchClient(self.settings)
+        self._budget_run_id: str | None = None
+        self._search_count = 0
 
     def call(self, params: str | dict, **kwargs) -> str:
         try:
@@ -86,18 +91,20 @@ class WebSearchTool(BaseTool):
             return _error_json("invalid_arguments", '"engines" must be an array')
         engines = explicit_engines or (policy.engines if policy else None)
 
-        # Budget check right before the real search: refuse once the run's
+        # Budget check right before the real search: refuse once this agent's
         # search allowance is spent, with an explicit stop instruction.
         run_id = get_run_id()
-        used = _search_counts.get(run_id, 0)
-        if used >= SEARCH_BUDGET_PER_RUN:
+        if run_id != self._budget_run_id:
+            self._budget_run_id = run_id
+            self._search_count = 0
+        if self._search_count >= SEARCH_BUDGET_PER_AGENT:
             return _error_json(
                 "search_budget_exhausted",
-                "the search budget for this run is exhausted. STOP searching: do NOT retry "
+                "your search budget is exhausted. STOP searching: do NOT retry "
                 "and do NOT rephrase the query. Proceed with the local sources/ registry "
                 "and the results already retrieved.",
             )
-        _search_counts[run_id] = used + 1
+        self._search_count += 1
 
         try:
             limit = int(arguments.get("limit", self.settings.max_results))

@@ -1,3 +1,9 @@
+import os
+
+# Raise qwen-agent's per-run LLM call cap BEFORE any qwen_agent import reads
+# it. The default (20) silently truncates search-heavy sub-agents mid-loop.
+os.environ.setdefault('QWEN_AGENT_MAX_LLM_CALL_PER_RUN', '40')
+
 import argparse
 
 from qwen_agent.log import logger

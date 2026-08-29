@@ -50,6 +50,7 @@ class BaseSubAgent(FnCallAgent):
             **kwargs,
         )
         self._last_output_text = ''
+        self._truncated = False
 
     def _run(self, messages: List[Message], **kwargs) -> Iterator[List[Message]]:
         new_messages = copy.deepcopy(messages)
@@ -68,6 +69,41 @@ class BaseSubAgent(FnCallAgent):
         for rsp in super()._run(messages=new_messages, **kwargs):
             yield rsp
         self._last_output_text = self._extract_last_text(rsp)
+        self._truncated = self._was_truncated(rsp)
+        # The result file is written by the framework, not the model: small
+        # models cannot reliably nest a multi-thousand-character document
+        # into a JSON tool argument, so the model simply ends with a plain
+        # Markdown reply and we persist it here.
+        self._save_result_file()
+
+    def _save_result_file(self) -> None:
+        if not self._last_output_text.strip():
+            return
+        result_path = get_subagents_dir() / f'{self.SUBAGENT_NAME}_result.md'
+        result_path.parent.mkdir(parents=True, exist_ok=True)
+        result_path.write_text(self._last_output_text, encoding='utf-8')
+
+    @staticmethod
+    def _was_truncated(rsp: List[Message]) -> bool:
+        """True when the run ended on an unresolved tool call.
+
+        FnCallAgent silently stops after MAX_LLM_CALL_PER_RUN LLM calls; the
+        tell-tale sign is a final assistant message that still asks for a
+        tool. Downstream steps should know the result is incomplete.
+        """
+        if not rsp:
+            return False
+        last = rsp[-1]
+        if last['role'] != ASSISTANT:
+            return False
+        if last.get('function_call'):
+            return True
+        content = last.get('content')
+        if isinstance(content, str):
+            return '<tool_call>' in content
+        if isinstance(content, list):
+            return any('<tool_call>' in (item.get('text') or '') for item in content)
+        return False
 
     def get_back_prompt(self) -> str:
         """Back prompt for the main agent, read from the sub-agent's result file.
@@ -80,6 +116,9 @@ class BaseSubAgent(FnCallAgent):
         else:
             result = ('(WARNING: sub-agent did not write its result file; '
                       'falling back to its final reply)\n') + (self._last_output_text or '(no output)')
+        if getattr(self, '_truncated', False):
+            result = ('(NOTE: this sub-agent was cut off by the framework LLM-call limit '
+                      'while still working; its result may be incomplete)\n') + result
         return MAIN_AGENT_BACK_PROMPT_TEMPLATE.format(
             sub_agent_name=self.SUBAGENT_NAME,
             step_content=self.STEP_CONTENT,
