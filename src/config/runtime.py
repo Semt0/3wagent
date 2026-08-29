@@ -33,6 +33,11 @@ def get_run_id() -> str:
     return _run_id
 
 
+def current_run_id() -> str | None:
+    """Current run_id without side effects (None before the first run)."""
+    return _run_id
+
+
 def get_run_dir() -> Path:
     return WORKSPACE_DIR / get_run_id()
 
