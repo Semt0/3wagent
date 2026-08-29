@@ -328,16 +328,13 @@ def test_main_agent_assigns_web_tools_only_to_retrieval_and_verification(monkeyp
 
 
 def test_qwen_search_tool_enforces_run_budget(monkeypatch):
-    from src.config.runtime import new_run_id
     from src.tools import web_search as web_search_module
     from src.tools.web_search import WebSearchTool
 
     monkeypatch.setenv("OPEN_WEBSEARCH_URL", "http://127.0.0.1:3210")
-    monkeypatch.setattr(web_search_module, "SEARCH_BUDGET_PER_RUN", 2)
-    new_run_id()
-    # run_id has 1-second resolution; another test may have spent budget under
-    # the same id, so start from a clean counter.
-    web_search_module._search_counts.clear()
+    monkeypatch.setattr(web_search_module, "SEARCH_BUDGET_PER_AGENT", 2)
+    # The budget is per tool instance (each agent holds its own), so a fresh
+    # instance always starts with a clean counter.
     tool = WebSearchTool()
 
     class FakeClient:
@@ -356,3 +353,39 @@ def test_qwen_search_tool_enforces_run_budget(monkeypatch):
     assert payload["status"] == "error"
     assert payload["error"]["code"] == "search_budget_exhausted"
     assert "STOP searching" in payload["error"]["message"]
+
+
+def test_qwen_fetch_tool_enforces_budget_and_clamps_max_chars(monkeypatch):
+    from src.tools import web_fetch as web_fetch_module
+    from src.tools.web_fetch import WebFetchTool
+
+    monkeypatch.setenv("OPEN_WEBSEARCH_URL", "http://127.0.0.1:3210")
+    monkeypatch.setattr(web_fetch_module, "FETCH_BUDGET_PER_AGENT", 2)
+    tool = WebFetchTool()
+
+    seen_max_chars = []
+
+    class FakeClient:
+        def fetch(self, url, **kwargs):
+            seen_max_chars.append(kwargs["max_chars"])
+            return FetchResponse(
+                url=url,
+                final_url=url,
+                title="Law",
+                content_type="text/html",
+                retrieval_method="request",
+                truncated=False,
+                content="Article text",
+            )
+
+    tool.client = FakeClient()
+    assert json.loads(tool.call({"url": "https://a.gov.cn/1", "max_chars": 20000}))["status"] == "ok"
+    assert json.loads(tool.call({"url": "https://a.gov.cn/2"}))["status"] == "ok"
+
+    # max_chars is clamped to the server-side cap regardless of the request
+    assert seen_max_chars[0] == web_fetch_module.MAX_FETCH_CHARS_CAP
+
+    payload = json.loads(tool.call({"url": "https://a.gov.cn/3"}))
+    assert payload["status"] == "error"
+    assert payload["error"]["code"] == "fetch_budget_exhausted"
+    assert "STOP fetching" in payload["error"]["message"]

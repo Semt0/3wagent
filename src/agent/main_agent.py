@@ -46,8 +46,12 @@ class MainAgent(FnCallAgent):
         llm: Optional[Union[Dict, BaseChatModel]] = None,
     ):
         tools = ['MarkDownReadTool', 'YamlReadTool', 'AttachmentReadTool', "WriteResult"]
-        retrieval_tools = tools + ['WebSearchTool', 'WebFetchTool']
-        verification_tools = tools + ['WebSearchTool', 'WebFetchTool']
+        # Workflow sub-agents report via their final reply (the framework
+        # persists it to the result file), so they no longer need WriteResult.
+        # The main agent and functional sub-agents keep it.
+        subagent_tools = ['MarkDownReadTool', 'YamlReadTool', 'AttachmentReadTool']
+        retrieval_tools = subagent_tools + ['WebSearchTool', 'WebFetchTool']
+        verification_tools = subagent_tools + ['WebSearchTool', 'WebFetchTool']
         super().__init__(
             llm=llm,
             function_list=tools,
@@ -55,18 +59,18 @@ class MainAgent(FnCallAgent):
             name='3wagent',
             description='跨境政策合规分析助手：资金合规、税务、民商法多领域协同分析。',
         )
-        self.routing_agent = RoutingSubAgent(function_list=tools, llm=llm)
+        self.routing_agent = RoutingSubAgent(function_list=subagent_tools, llm=llm)
         self.rag_agent = RagSubAgent(function_list=retrieval_tools, llm=llm)
         self.validate_agent = ValidateSubAgent(function_list=verification_tools, llm=llm)
         self.citation_verifier = CitationVerifierSubAgent(
             function_list=verification_tools, llm=llm
         )
-        self.report_writer = ReportWritingSubAgent(function_list=tools, llm=llm)
+        self.report_writer = ReportWritingSubAgent(function_list=subagent_tools, llm=llm)
         # Domain analysts, selected per routing result (see _select_analysts)
         self.analysts = {
-            'tax': TaxPolicyAnalystSubAgent(function_list=tools, llm=llm),
-            'funds': FundsComplianceAnalystSubAgent(function_list=tools, llm=llm),
-            'commercial': CommercialLawAnalystSubAgent(function_list=tools, llm=llm),
+            'tax': TaxPolicyAnalystSubAgent(function_list=subagent_tools, llm=llm),
+            'funds': FundsComplianceAnalystSubAgent(function_list=subagent_tools, llm=llm),
+            'commercial': CommercialLawAnalystSubAgent(function_list=subagent_tools, llm=llm),
         }
         # Functional subagent for policy-question detection (clean context)
         self.mode_detector = ModeDetector(llm = llm, function_list=tools)
