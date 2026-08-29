@@ -30,5 +30,7 @@ workspace/
 
 # Reference archives kept on disk but out of version control
 docs/
+!src/docs/
+!src/docs/**
 examples/
 .claude/
