@@ -47,6 +47,9 @@ class BaseSubAgent(FnCallAgent):
         super().__init__(
             function_list=function_list if function_list is not None else self.TOOLS,
             llm=llm,
+            # qwen-agent tags every output message with this name; the WebUI
+            # uses it to fold sub-agent transcripts into collapsible blocks.
+            name=self.SUBAGENT_NAME,
             **kwargs,
         )
         self._last_output_text = ''
@@ -70,6 +73,19 @@ class BaseSubAgent(FnCallAgent):
             yield rsp
         self._last_output_text = self._extract_last_text(rsp)
         self._truncated = self._was_truncated(rsp)
+        if self._truncated:
+            # The framework LLM-call cap cut the tool loop mid-work. Force one
+            # tool-free finalization round so the sub-agent still concludes in
+            # writing instead of vanishing without a result.
+            finalize_messages = new_messages + rsp + [Message(USER, FINALIZE_USER_PROMPT)]
+            fin: List[Message] = []
+            for fin in self._call_llm(messages=finalize_messages, functions=[]):
+                yield fin
+            final_text = self._extract_last_text(fin)
+            if final_text:
+                rsp = rsp + fin
+                self._last_output_text = final_text
+                self._truncated = False  # concluded in writing despite the cut tool loop
         # The result file is written by the framework, not the model: small
         # models cannot reliably nest a multi-thousand-character document
         # into a JSON tool argument, so the model simply ends with a plain

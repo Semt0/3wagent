@@ -217,6 +217,11 @@ Now {sub_agent_name} has completed its work, and the results are as follow:
 Now Move on to the next step!
 """
 
+FINALIZE_USER_PROMPT = (
+    "Tool-call limit reached. Do NOT call any more tools. "
+    "Now output your COMPLETE final result as plain Markdown text, in Chinese."
+)
+
 FUNCTIONAL_SUBAGENT_SYSTEM_PROMPT = """
 You are a functional agent.You will receive some input and requirements from user, and output the formatted results to specific files(using WriteResult tool).
 Remember that you should write your result into files in the SAME FORMAT as the user requirements.

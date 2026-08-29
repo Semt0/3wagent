@@ -102,7 +102,9 @@ class WebSearchTool(BaseTool):
                 "search_budget_exhausted",
                 "your search budget is exhausted. STOP searching: do NOT retry "
                 "and do NOT rephrase the query. Proceed with the local sources/ registry "
-                "and the results already retrieved.",
+                "and the results already retrieved. If you have enough information, STOP "
+                "all tool calls now and write your final answer as plain Markdown text "
+                "(no tool call).",
             )
         self._search_count += 1
 

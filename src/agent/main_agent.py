@@ -77,6 +77,8 @@ class MainAgent(FnCallAgent):
         # Functional subagent for analyst selection from the routing result
         self.analysts_selector = AnalystsSelector(llm = llm, function_list=tools)
         self.mode = AgentMode.NORMAL
+        # Current workflow step label for the WebUI status panel; None in NORMAL mode.
+        self.current_step: Optional[str] = None
 
     def _run(
         self,
@@ -110,14 +112,21 @@ class MainAgent(FnCallAgent):
         # Mode transition: NORMAL -> WORKING when a policy question is detected.
         # (Detection is skipped while WORKING; the workflow finishes within one
         # _run call, and failures also fall back to NORMAL via the finally below.)
-        if self.mode == AgentMode.NORMAL and self._is_policy_question(messages[-1]):
-            self.mode = AgentMode.WORKING
+        if self.mode == AgentMode.NORMAL:
+            self.current_step = '模式检测'
+            try:
+                is_policy = self._is_policy_question(messages[-1])
+            finally:
+                self.current_step = None
+            if is_policy:
+                self.mode = AgentMode.WORKING
 
         if self.mode == AgentMode.WORKING:
             try:
                 yield from self._run_workflow(messages, lang=lang, **kwargs)
             finally:
                 self.mode = AgentMode.NORMAL
+                self.current_step = None
         else:
             yield from super()._run(messages=messages, lang=lang, **kwargs)
 
@@ -158,6 +167,7 @@ class MainAgent(FnCallAgent):
         
         ### Step 2: Routing SubAgent
         # subagent run
+        self.current_step = self.routing_agent.STEP_CONTENT
         for rsp in self.routing_agent.run(new_messages):
             yield response + rsp
         
@@ -170,6 +180,7 @@ class MainAgent(FnCallAgent):
 
         ### Step 3: RAG SubAgent
         # subagent run
+        self.current_step = self.rag_agent.STEP_CONTENT
         for rsp in self.rag_agent.run(new_messages):
             yield response + rsp
 
@@ -181,6 +192,7 @@ class MainAgent(FnCallAgent):
 
         ### Step 4: Validate SubAgent
         # subagent run
+        self.current_step = self.validate_agent.STEP_CONTENT
         for rsp in self.validate_agent.run(new_messages):
             yield response + rsp
 
@@ -191,25 +203,30 @@ class MainAgent(FnCallAgent):
         new_messages.append(Message(ASSISTANT,self.validate_agent.get_back_prompt()))
 
         ### Step 5: Domain Analysts selected by the routing result
+        self.current_step = 'Step 5: 选择领域分析师'
         for analyst in self._select_analysts():
+            self.current_step = analyst.STEP_CONTENT
             for rsp in analyst.run(new_messages):
                 yield response + rsp
             response.extend(rsp)
             new_messages.append(Message(ASSISTANT, analyst.get_back_prompt()))
 
         ### Step 6: Citation-Verifier SubAgent
+        self.current_step = self.citation_verifier.STEP_CONTENT
         for rsp in self.citation_verifier.run(new_messages):
             yield response + rsp
         response.extend(rsp)
         new_messages.append(Message(ASSISTANT, self.citation_verifier.get_back_prompt()))
 
         ### Step 7: Report Writing SubAgent
+        self.current_step = self.report_writer.STEP_CONTENT
         for rsp in self.report_writer.run(new_messages):
             yield response + rsp
         response.extend(rsp)
         new_messages.append(Message(ASSISTANT, self.report_writer.get_back_prompt()))
 
         # Final main loop: keep the accumulated subagent transcript in every frame
+        self.current_step = '主代理综合'
         for rsp in super()._run(messages=new_messages, lang=lang, **kwargs):
             yield response + rsp
 

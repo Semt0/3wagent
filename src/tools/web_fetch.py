@@ -77,7 +77,9 @@ class WebFetchTool(BaseTool):
             return _error_json(
                 "fetch_budget_exhausted",
                 "your fetch budget is exhausted. STOP fetching: do NOT retry and do NOT "
-                "fetch other URLs. Proceed with the content already retrieved.",
+                "fetch other URLs. Proceed with the content already retrieved. If you have "
+                "enough information, STOP all tool calls now and write your final answer "
+                "as plain Markdown text (no tool call).",
             )
         self._fetch_count += 1
 

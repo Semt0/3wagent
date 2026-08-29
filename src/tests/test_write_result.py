@@ -33,3 +33,14 @@ def test_salvage_returns_none_without_markers():
     assert _salvage_params("not json at all") is None
     assert _salvage_params('{"file_path": "a.md"}') is None
     assert _salvage_params(123) is None
+
+
+def test_read_tools_reject_duplicate_reads():
+    from src.tools.read_markdown_files import MarkDownReadTool
+
+    tool = MarkDownReadTool()
+    first = tool.call({"file_path": "config/routing.yaml"})
+    assert "error" not in first[:20]
+    second = tool.call({"file_path": "config/routing.yaml"})
+    assert second.startswith("error: you have already read this file")
+    assert "STOP all tool calls" in second
