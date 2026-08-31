@@ -59,6 +59,7 @@ def ingest_file(path: Path,
     parser_name, parse_fn = parser_entry
     try:
         document_id, stored_path, digest = storage.store_upload(path, settings)
+        storage.register_session_document(document_id)
         chunks, warnings, metadata = parse_fn(stored_path, settings)
         doc = ParsedDocument(
             document_id=document_id,

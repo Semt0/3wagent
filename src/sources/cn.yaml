@@ -22,11 +22,11 @@ sources:
   - id: cn-foreign-exchange-regulations
     title: Regulations of the People's Republic of China on Foreign Exchange Administration
     authority: State Council of the People's Republic of China
-    url: https://www.gov.cn/zwgk/2008-08/06/content_1065910.htm
+    url: https://www.safe.gov.cn/safe/2008/0806/5321.html
     domains: [funds]
     reliability: S
     source_type: administrative regulation
-    notes: Core administrative regulation for China foreign exchange administration. Use before analyzing RMB/foreign currency conversion, settlement, sale, payment or remittance issues involving Mainland China.
+    notes: Core administrative regulation for China foreign exchange administration, mirrored on the official SAFE portal after the legacy gov.cn URL was retired. Use before analyzing RMB/foreign currency conversion, settlement, sale, payment or remittance issues involving Mainland China.
 
   - id: cn-safe-policy-regulations
     title: Policy and Regulation Index
@@ -59,11 +59,11 @@ sources:
   - id: cn-safe-business-guide
     title: Business Guide
     authority: State Administration of Foreign Exchange
-    url: https://www.safe.gov.cn/safe/ywzn/index.html
+    url: https://www.safe.gov.cn/safe/wsfw/
     domains: [funds]
     reliability: A
     source_type: regulator guidance
-    notes: SAFE business guide entry point. Use for operational handling, bank procedures, registration and filing pathways.
+    notes: SAFE online-services entry point, including administrative service guides and policy Q&A. Use for operational handling, bank procedures, registration and filing pathways.
 
   - id: cn-pboc-laws-regulations
     title: Laws and Regulations

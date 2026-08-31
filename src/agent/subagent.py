@@ -6,25 +6,31 @@ sub-agents only declare identity and prompts as class attributes.
 """
 
 import copy
-import json5
 from datetime import date
 from typing import Dict, Iterator, List, Optional, Union
 
+import json5
 from qwen_agent.agents import FnCallAgent
 from qwen_agent.llm import BaseChatModel
 from qwen_agent.llm.schema import ASSISTANT, USER, Message
 from qwen_agent.tools import BaseTool
 
-from src.prompts.prompts import *
+from src.agent.tool_loop_guard import (
+    TerminalToolResult,
+    raise_for_terminal_tool_result,
+    terminal_finalize_prompt,
+)
 from src.config.runtime import get_run_dir_relative, get_subagents_dir
+from src.prompts.prompts import *
 from src.tools.common import PROJECT_ROOT
 
 # Import tools so their @register_tool side effects run (string refs in function_list)
+from src.tools.read_attachment import AttachmentReadTool  # noqa: F401
 from src.tools.read_markdown_files import MarkDownReadTool  # noqa: F401
 from src.tools.read_yaml_files import YamlReadTool  # noqa: F401
-from src.tools.write_result import WriteResult  # noqa: F401
 from src.tools.web_fetch import WebFetchTool  # noqa: F401
 from src.tools.web_search import WebSearchTool  # noqa: F401
+from src.tools.write_result import WriteResult  # noqa: F401
 
 
 class BaseSubAgent(FnCallAgent):
@@ -35,6 +41,12 @@ class BaseSubAgent(FnCallAgent):
     SYSTEM_PROMPT: str = ''
     USER_PROMPT: str = 'Now start your working according to the previous messages and information.'
     TOOLS: List[Union[str, Dict, BaseTool]] = []
+
+    # Cap on how much of a result file is injected into the next agent's
+    # context. Unbounded injection lets a long retrieval result snowball
+    # through every later step until the context window overflows; the full
+    # text stays on disk and every workflow agent has MarkDownReadTool.
+    BACK_PROMPT_RESULT_MAX_CHARS: int = 8000
 
     def __init__(
         self,
@@ -69,8 +81,25 @@ class BaseSubAgent(FnCallAgent):
         new_messages.append(Message(USER, f'{self.USER_PROMPT}\n(Current date: {date.today().isoformat()})'))
 
         rsp: List[Message] = []
-        for rsp in super()._run(messages=new_messages, **kwargs):
-            yield rsp
+        terminal_result: TerminalToolResult | None = None
+        try:
+            for rsp in super()._run(messages=new_messages, **kwargs):
+                yield rsp
+        except TerminalToolResult as exc:
+            terminal_result = exc
+
+        if terminal_result is not None:
+            finalize_messages = new_messages + rsp + [
+                Message(USER, terminal_finalize_prompt(terminal_result))
+            ]
+            fin: List[Message] = []
+            for fin in self._call_llm(messages=finalize_messages, functions=[]):
+                yield rsp + fin
+            self._last_output_text = self._extract_last_text(fin)
+            self._truncated = False
+            self._save_result_file()
+            return
+
         self._last_output_text = self._extract_last_text(rsp)
         self._truncated = self._was_truncated(rsp)
         if self._truncated:
@@ -91,6 +120,11 @@ class BaseSubAgent(FnCallAgent):
         # into a JSON tool argument, so the model simply ends with a plain
         # Markdown reply and we persist it here.
         self._save_result_file()
+
+    def _call_tool(self, tool_name, tool_args='{}', **kwargs):
+        result = super()._call_tool(tool_name, tool_args, **kwargs)
+        raise_for_terminal_tool_result(tool_name, result)
+        return result
 
     def _save_result_file(self) -> None:
         if not self._last_output_text.strip():
@@ -129,6 +163,13 @@ class BaseSubAgent(FnCallAgent):
         result_path = get_subagents_dir() / f'{self.SUBAGENT_NAME}_result.md'
         if result_path.exists():
             result = result_path.read_text(encoding='utf-8')
+            if len(result) > self.BACK_PROMPT_RESULT_MAX_CHARS:
+                relative_path = get_run_dir_relative() / 'sub_agents' / result_path.name
+                result = result[: self.BACK_PROMPT_RESULT_MAX_CHARS] + (
+                    f'\n\n...(result truncated at {self.BACK_PROMPT_RESULT_MAX_CHARS} chars; '
+                    f'the complete result is saved at {relative_path} — read it with '
+                    'MarkDownReadTool if you need the full text)'
+                )
         else:
             result = ('(WARNING: sub-agent did not write its result file; '
                       'falling back to its final reply)\n') + (self._last_output_text or '(no output)')

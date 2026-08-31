@@ -21,6 +21,25 @@ from pathlib import Path
 
 from src.tools.common import PROJECT_ROOT
 
+# Ids of documents ingested during this process lifetime. AttachmentReadTool
+# uses it to answer "document not found" with the real choices (or the fact
+# that nothing was uploaded) instead of letting the model guess ids.
+_session_documents: set[str] = set()
+
+
+def register_session_document(document_id: str) -> None:
+    if document_id:
+        _session_documents.add(document_id)
+
+
+def session_document_ids() -> list[str]:
+    return sorted(_session_documents)
+
+
+def reset_session_documents() -> None:
+    """Clear process-local state. Intended for tests."""
+    _session_documents.clear()
+
 
 def _root(settings) -> Path:
     root = PROJECT_ROOT / settings.storage_dir
