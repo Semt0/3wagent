@@ -146,10 +146,38 @@ Web Search 使用独立的本地 `open-websearch` daemon。安装与启动方法
 | `OPEN_WEBSEARCH_STARTUP_TIMEOUT_SECONDS` | `15` | daemon 就绪等待时间，范围 1–120 秒 |
 | `WEBSEARCH_TIMEOUT_SECONDS` | `30` | 单次 HTTP 调用超时，范围 1–120 秒 |
 | `WEBSEARCH_MAX_RESULTS` | `10` | 搜索结果硬上限，范围 1–50 |
-| `WEBFETCH_MAX_CHARS` | `20000` | 单页正文字符硬上限，范围 1000–200000 |
+| `WEBFETCH_MAX_CHARS` | `8000` | 单页正文字符硬上限，范围 1000–8000 |
 | `WEBSEARCH_FALLBACK_TO_SEARXNG` | `false` | open-websearch 失败或无结果时回退旧 SearXNG |
 
 检索遵循：本地 `sources/` registry 优先，开放网络仅作补充；搜索摘要只能用于发现候选 URL，必须通过 `WebFetchTool` 获取官方页面正文后才能作为证据。法域对应的引擎与官方域名配置位于 `config/jurisdictions.yaml`。
+
+对于标记为 `CN` 且包含外汇、汇发、跨境贸易、资本项目或经常项目等关键词的
+查询，`WebSearchTool` 会先调用 SAFE 官网的固定站内检索入口；只要获得结果，
+便直接返回官方域名候选，不再同时调用通用搜索引擎。SAFE 的政策法规、行政规范
+性文件和网上服务索引页若被通用正文抽取器误识别为页脚，`WebFetchTool` 会从
+固定的 SAFE HTTPS 主机读取原始 HTML，并返回紧凑的标题、日期与具体页面链接。
+该回退仅适用于三个预先允许的索引路径，不会接受模型提供的任意站点或路径。
+
+远程 PDF 与上传 PDF 使用两条通用读取链路：`WebFetchTool` 会将来源校验通过的
+公共 PDF URL 下载后用 pypdf 转换为带页码的正文；用户上传的 PDF 则由附件摄取
+层解析为带 `pdf:pN` locator 的内容，未内联页面通过 `AttachmentReadTool` 读取。
+这两项工具都向需要读取来源正文的 agent 开放，不依赖特定网站或 URL 路径。
+
+`WebFetchTool` 只接受用户当前消息明确提供的 URL、本轮 `WebSearchTool` 实际
+返回的 URL、`sources/` registry 中登记的 URL，或已抓取页面中的链接。模型根据标题、日期、文号或
+其他页面路径自行拼接的 URL 会在联网前被拒绝；同一个返回 404 的 URL 在
+本轮不会被再次请求。遇到 404 时，应按准确标题和文号搜索一次替代官方入口，
+仍未找到则明确记录证据缺口，不得继续猜测路径。
+
+每个 agent 对同一个规范化 URL 最多成功抓取一次；再次请求不会访问网络，
+也不会把相同正文重复写入上下文。若模型在成功抓取、已知失败或搜索/抓取
+预算耗尽后仍继续调用工具，agent 运行层会终止工具循环，并进行一次禁用工具的
+最终总结。该限制是 agent 实例级的：检索与核验 agent 仍可各自独立获取同一来源。
+
+网络超时等可重试错误对同一 URL 最多进行两次真实请求；不可重试错误只请求
+一次，之后的同 URL 调用直接进入终态。参数错误不会消耗抓取预算。Python 客户端
+会拒绝传统数字形式的私网 IP，并在调用 daemon 前检查 DNS 结果；bundled
+`open-websearch` 还会对每次重定向及浏览器导航重复执行公网地址校验。
 
 ### LLM 配置
 

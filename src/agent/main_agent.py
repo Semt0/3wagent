@@ -1,24 +1,33 @@
-from typing import Dict, Iterator, List, Literal, Optional, Union
+from __future__ import annotations
+
 import copy
+from collections.abc import Iterator
 from enum import Enum
+from typing import Literal
 
 from qwen_agent.agents import FnCallAgent
 from qwen_agent.llm import BaseChatModel
-from qwen_agent.llm.schema import  Message, ASSISTANT
+from qwen_agent.llm.schema import ASSISTANT, USER, Message
 
 from src.agent.attachments import inline_uploaded_files, supported_formats_hint
+from src.agent.subagent import *
+from src.agent.tool_loop_guard import (
+    TerminalToolResult,
+    raise_for_terminal_tool_result,
+    terminal_finalize_prompt,
+)
 from src.config.llm import load_llm_config
+from src.config.logger import attach_run_log
+from src.config.runtime import get_run_dir, get_subagents_dir, new_run_id
 from src.config.webui import WEBUI_CHATBOT_CONFIG
-from src.prompts.prompts import MAIN_AGENT_SYS_PROMPT
+from src.prompts.prompts import FINALIZE_USER_PROMPT, MAIN_AGENT_SYS_PROMPT
 from src.tools.read_attachment import AttachmentReadTool  # noqa: F401
 from src.tools.read_markdown_files import MarkDownReadTool  # noqa: F401
 from src.tools.read_yaml_files import YamlReadTool  # noqa: F401
-from src.tools.write_result import WriteResult
 from src.tools.web_fetch import WebFetchTool  # noqa: F401
 from src.tools.web_search import WebSearchTool  # noqa: F401
-from src.agent.subagent import *
-from src.config.logger import attach_run_log
-from src.config.runtime import get_run_dir, get_subagents_dir, new_run_id
+from src.tools.write_result import WriteResult  # noqa: F401
+from src.websearch.provenance import register_user_provided_urls
 
 
 class AgentMode(Enum):
@@ -43,9 +52,16 @@ class MainAgent(FnCallAgent):
 
     def __init__(
         self,
-        llm: Optional[Union[Dict, BaseChatModel]] = None,
+        llm: dict | BaseChatModel | None = None,
     ):
-        tools = ['MarkDownReadTool', 'YamlReadTool', 'AttachmentReadTool', "WriteResult"]
+        tools = [
+            'MarkDownReadTool',
+            'YamlReadTool',
+            'AttachmentReadTool',
+            'WebFetchTool',
+            'WriteResult',
+        ]
+        functional_tools = ['WriteResult']
         # Workflow sub-agents report via their final reply (the framework
         # persists it to the result file), so they no longer need WriteResult.
         # The main agent and functional sub-agents keep it.
@@ -73,19 +89,19 @@ class MainAgent(FnCallAgent):
             'commercial': CommercialLawAnalystSubAgent(function_list=subagent_tools, llm=llm),
         }
         # Functional subagent for policy-question detection (clean context)
-        self.mode_detector = ModeDetector(llm = llm, function_list=tools)
+        self.mode_detector = ModeDetector(llm=llm, function_list=functional_tools)
         # Functional subagent for analyst selection from the routing result
-        self.analysts_selector = AnalystsSelector(llm = llm, function_list=tools)
+        self.analysts_selector = AnalystsSelector(llm=llm, function_list=functional_tools)
         self.mode = AgentMode.NORMAL
         # Current workflow step label for the WebUI status panel; None in NORMAL mode.
-        self.current_step: Optional[str] = None
+        self.current_step: str | None = None
 
     def _run(
         self,
-        messages: List[Message],
+        messages: list[Message],
         lang: Literal['en', 'zh'] = 'en',
         **kwargs,
-    ) -> Iterator[List[Message]]:
+    ) -> Iterator[list[Message]]:
         # Resolve attachments FIRST: an unreadable-only upload blocks the run
         # regardless of mode (and never reaches mode detection or the LLM).
         # Resolving the original messages[-1] (not a copy) is safe here: the
@@ -107,6 +123,7 @@ class MainAgent(FnCallAgent):
 
         # Start a new run: all artifacts go under workspace/<run_id>/
         new_run_id()
+        register_user_provided_urls(_message_text(messages[-1]))
         attach_run_log(getattr(self.llm, 'model', 'model') or 'model')
 
         # Mode transition: NORMAL -> WORKING when a policy question is detected.
@@ -128,16 +145,32 @@ class MainAgent(FnCallAgent):
                 self.mode = AgentMode.NORMAL
                 self.current_step = None
         else:
-            yield from super()._run(messages=messages, lang=lang, **kwargs)
+            yield from self._run_fncall_with_guard(messages, lang=lang, **kwargs)
+
+    def _run_fncall_with_guard(
+        self,
+        messages: list[Message],
+        lang: Literal['en', 'zh'] = 'en',
+        **kwargs,
+    ) -> Iterator[list[Message]]:
+        rsp: list[Message] = []
+        try:
+            for rsp in super()._run(messages=messages, lang=lang, **kwargs):
+                yield rsp
+        except TerminalToolResult as exc:
+            final_messages = messages + rsp + [Message(USER, terminal_finalize_prompt(exc))]
+            for fin in self._call_llm(messages=final_messages, functions=[]):
+                yield rsp + fin
+
+    def _call_tool(self, tool_name, tool_args='{}', **kwargs):
+        result = super()._call_tool(tool_name, tool_args, **kwargs)
+        raise_for_terminal_tool_result(tool_name, result)
+        return result
 
     # Check if the user last question is a policy question
     def _is_policy_question(self, last_message: Message) -> bool:
         """Ask the functional subagent whether this input is a policy question."""
-        content = last_message.get('content')
-        if isinstance(content, list):
-            question = ''.join(item.get('text') or '' for item in content)
-        else:
-            question = str(content or '')
+        question = _message_text(last_message)
         if not question.strip():
             return False
         result_path = get_run_dir() / 'mode_detection.json'
@@ -151,10 +184,10 @@ class MainAgent(FnCallAgent):
 
     def _run_workflow(
         self,
-        messages: List[Message],
+        messages: list[Message],
         lang: Literal['en', 'zh'] = 'en',
         **kwargs,
-    ) -> Iterator[List[Message]]:
+    ) -> Iterator[list[Message]]:
         # DeepCopy, Empty Previous Response
         # (attachments were already resolved and inlined in _run above)
         new_messages = copy.deepcopy(messages)
@@ -227,8 +260,17 @@ class MainAgent(FnCallAgent):
 
         # Final main loop: keep the accumulated subagent transcript in every frame
         self.current_step = '主代理综合'
-        for rsp in super()._run(messages=new_messages, lang=lang, **kwargs):
+        final_rsp: list[Message] = []
+        for rsp in self._run_fncall_with_guard(new_messages, lang=lang, **kwargs):
+            final_rsp = rsp
             yield response + rsp
+        if BaseSubAgent._was_truncated(final_rsp):
+            # Same recovery as BaseSubAgent: the framework LLM-call cap cut the
+            # tool loop mid-work, so force one tool-free finalization round to
+            # still deliver a written answer instead of vanishing.
+            finalize_messages = new_messages + final_rsp + [Message(USER, FINALIZE_USER_PROMPT)]
+            for fin in self._call_llm(messages=finalize_messages, functions=[]):
+                yield response + final_rsp + fin
 
     def _select_analysts(self):
         """Pick domain analysts by asking the analysts_selector functional
@@ -239,13 +281,27 @@ class MainAgent(FnCallAgent):
         """
         routing_result_path = get_subagents_dir() / 'routing_subagent_result.md'
         routing_result = routing_result_path.read_text(encoding='utf-8') if routing_result_path.exists() else ''
+        if not routing_result.strip():
+            # Routing produced nothing (typically its tool loop hit the
+            # framework call cap). Asking the selector with empty input
+            # invites a guess, so skip it and fall back to the two domains
+            # that cover most cross-border payment issues.
+            return [self.analysts['tax'], self.analysts['funds']]
         selection_path = get_run_dir() / 'analyst_selection.json'
         try:
             result = self.analysts_selector.run_task(input_text=routing_result, output_path=selection_path)
             selected = [self.analysts[name] for name in result.get('analysts', []) if name in self.analysts]
-        except Exception:
+        except Exception:  # noqa: BLE001 - selection failure has a safe fallback
             selected = []
         return selected or [self.analysts['tax']]
+
+
+def _message_text(message: Message) -> str:
+    content = message.get('content')
+    if isinstance(content, list):
+        return ''.join(item.get('text') or '' for item in content)
+    return str(content or '')
+
 
 def run_3wagent(model_name=None, provider=None, config_path=None):
     # Imported lazily so headless usage/tests don't require qwen-agent[gui]

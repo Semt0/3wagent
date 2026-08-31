@@ -44,7 +44,7 @@ class WebSearchSettings:
     base_url: str = "http://127.0.0.1:3210"
     timeout_seconds: int = 30
     max_results: int = 10
-    max_fetch_chars: int = 20_000
+    max_fetch_chars: int = 8_000
     fallback_to_searxng: bool = False
     allow_remote_service: bool = False
     auto_start: bool = True
@@ -69,7 +69,7 @@ class WebSearchSettings:
                 "WEBFETCH_MAX_CHARS",
                 cls.max_fetch_chars,
                 minimum=1_000,
-                maximum=200_000,
+                maximum=8_000,
             ),
             fallback_to_searxng=_env_bool(env, "WEBSEARCH_FALLBACK_TO_SEARXNG", False),
             allow_remote_service=allow_remote,

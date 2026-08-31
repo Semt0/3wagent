@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import ipaddress
 import json
+import os
+import socket
 from collections.abc import Callable
 from typing import Any
 from urllib.error import HTTPError, URLError
@@ -57,6 +60,7 @@ class OpenWebSearchError(RuntimeError):
 
 
 Transport = Callable[[Request, float], tuple[int, bytes]]
+Resolver = Callable[..., list[tuple]]
 
 
 class OpenWebSearchClient:
@@ -68,10 +72,16 @@ class OpenWebSearchClient:
         *,
         transport: Transport | None = None,
         opener: OpenerDirector | None = None,
+        resolver: Resolver | None = None,
     ) -> None:
         self.settings = settings or WebSearchSettings.from_env()
         self._opener = opener or build_opener(ProxyHandler({}))
         self._transport = transport or self._default_transport
+        self._resolver = resolver or socket.getaddrinfo
+        # Custom transports are normally deterministic unit-test adapters and
+        # do not access the requested target. Production/default transport
+        # performs a DNS preflight before handing the URL to the daemon.
+        self._resolve_fetch_targets = transport is None or resolver is not None
 
     def status(self) -> dict[str, Any]:
         data = self._request("GET", "/status")
@@ -145,6 +155,8 @@ class OpenWebSearchClient:
         include_links: bool = True,
     ) -> FetchResponse:
         clean_url = _validate_public_url(url)
+        if self._resolve_fetch_targets:
+            clean_url = _validate_resolved_public_url(clean_url, resolver=self._resolver)
         if render_mode not in {"request", "auto", "browser"}:
             raise OpenWebSearchError("invalid_request", "invalid render_mode")
         effective_max_chars = min(
@@ -255,16 +267,92 @@ def _validate_public_url(url: str) -> str:
         raise OpenWebSearchError("invalid_request", "url must be a public HTTP(S) URL")
     if parsed.username or parsed.password:
         raise OpenWebSearchError("invalid_request", "url must not contain credentials")
-    hostname = parsed.hostname.lower()
+    hostname = parsed.hostname.lower().rstrip(".")
     if hostname in {"localhost", "::1"} or hostname.endswith(".localhost"):
         raise OpenWebSearchError("invalid_request", "local URLs are not allowed")
-    try:
-        import ipaddress
+    address = _parse_ip_literal(hostname)
+    if address is not None and not address.is_global:
+        raise OpenWebSearchError("invalid_request", "private or local URLs are not allowed")
+    return clean_url
 
-        address = ipaddress.ip_address(hostname)
+
+def _validate_resolved_public_url(url: str, *, resolver: Resolver) -> str:
+    """Resolve a fetch target and reject any private/local DNS answer.
+
+    The bundled open-websearch daemon repeats this check for every redirect
+    and browser navigation. This Python-side check fails unsafe inputs before
+    they cross the local daemon boundary.
+    """
+    clean_url = _validate_public_url(url)
+    parsed = urlparse(clean_url)
+    hostname = (parsed.hostname or "").rstrip(".")
+    if _parse_ip_literal(hostname) is not None:
+        return clean_url
+    port = parsed.port or (443 if parsed.scheme == "https" else 80)
+    try:
+        addresses = resolver(hostname, port, type=socket.SOCK_STREAM)
+    except OSError as exc:
+        raise OpenWebSearchError(
+            "target_resolution_failed",
+            f"fetch target DNS resolution failed: {exc}",
+            retryable=True,
+        ) from exc
+    if not addresses:
+        raise OpenWebSearchError(
+            "target_resolution_failed",
+            "fetch target DNS resolution returned no addresses",
+            retryable=True,
+        )
+    for entry in addresses:
+        try:
+            address = ipaddress.ip_address(entry[4][0].split("%", 1)[0])
+        except (IndexError, ValueError) as exc:
+            raise OpenWebSearchError(
+                "target_resolution_failed",
+                "fetch target DNS resolution returned an invalid address",
+            ) from exc
+        if not address.is_global and not _is_allowed_fake_dns_address(address):
+            raise OpenWebSearchError(
+                "invalid_request",
+                "fetch target resolves to a private or local network address",
+            )
+    return clean_url
+
+
+def _parse_ip_literal(hostname: str) -> ipaddress.IPv4Address | ipaddress.IPv6Address | None:
+    """Parse standard and legacy numeric IP spellings accepted by URL stacks."""
+    candidate = hostname.split("%", 1)[0]
+    try:
+        return ipaddress.ip_address(candidate)
     except ValueError:
         pass
-    else:
-        if not address.is_global:
-            raise OpenWebSearchError("invalid_request", "private or local URLs are not allowed")
-    return clean_url
+    try:
+        # inet_aton accepts legacy forms such as 2130706433, 0x7f000001,
+        # and 127.1 that browsers/HTTP stacks may normalize to 127.0.0.1.
+        packed = socket.inet_aton(candidate)
+    except OSError:
+        return None
+    return ipaddress.IPv4Address(packed)
+
+
+def _is_allowed_fake_dns_address(
+    address: ipaddress.IPv4Address | ipaddress.IPv6Address,
+) -> bool:
+    """Honor proxy fake-IP configuration without opening real private ranges.
+
+    The daemon supports ``FAKE_IP_CIDRS`` for Clash-style synthetic DNS. We
+    intentionally constrain the Python exception to the IANA benchmarking
+    range used for fake IPv4 answers; loopback, link-local and RFC1918 ranges
+    remain blocked even if accidentally included in the environment variable.
+    """
+    synthetic_range = ipaddress.ip_network("198.18.0.0/15")
+    if not isinstance(address, ipaddress.IPv4Address) or address not in synthetic_range:
+        return False
+    for raw_cidr in os.environ.get("FAKE_IP_CIDRS", "").split(","):
+        try:
+            configured = ipaddress.ip_network(raw_cidr.strip(), strict=False)
+        except ValueError:
+            continue
+        if isinstance(configured, ipaddress.IPv4Network) and address in configured:
+            return True
+    return False

@@ -1,8 +1,14 @@
 """Tests for the WebUI display helpers (grouping and side panels)."""
 
+from pathlib import Path
 from types import SimpleNamespace
 
-from src.agent.webui import MAIN_AGENT_NAME, ThemedWebUI, group_responses_for_display
+from src.agent.webui import (
+    MAIN_AGENT_NAME,
+    THEME_CSS_PATH,
+    ThemedWebUI,
+    group_responses_for_display,
+)
 
 
 def _msg(content, name=None, role='assistant'):
@@ -35,8 +41,18 @@ def test_group_empty_and_main_only():
     assert [u['content'] for u in units] == ['a', 'b']
 
 
+def test_theme_overrides_vendor_details_nowrap_and_bounds_wide_content():
+    css = Path(THEME_CSS_PATH).read_text(encoding='utf-8')
+
+    assert 'white-space: normal !important;' in css
+    assert '.gradio-container .markdown-body details' in css
+    assert '.gradio-container .markdown-body table' in css
+    assert 'max-width: 100%;' in css
+    assert 'overflow-x: auto;' in css
+
+
 def test_render_side_panels(tmp_path, monkeypatch):
-    import src.config.runtime as runtime
+    from src.config import runtime
 
     monkeypatch.setattr(runtime, '_run_id', 'test-run')
     monkeypatch.setattr(runtime, 'WORKSPACE_DIR', tmp_path)
@@ -61,7 +77,7 @@ def test_render_side_panels(tmp_path, monkeypatch):
 
 
 def test_render_side_panels_without_run(tmp_path, monkeypatch):
-    import src.config.runtime as runtime
+    from src.config import runtime
 
     monkeypatch.setattr(runtime, '_run_id', None)
     fake_self = SimpleNamespace(
@@ -73,7 +89,7 @@ def test_render_side_panels_without_run(tmp_path, monkeypatch):
 
 
 def test_side_panels_render_plain_strings_repeatedly(tmp_path, monkeypatch):
-    import src.config.runtime as runtime
+    from src.config import runtime
 
     monkeypatch.setattr(runtime, '_run_id', None)
     fake_self = SimpleNamespace(

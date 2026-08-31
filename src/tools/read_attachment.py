@@ -18,9 +18,17 @@ import re
 
 from qwen_agent.tools.base import BaseTool, register_tool
 
-from src.attachments.storage import load_document
+from src.attachments.storage import load_document, session_document_ids
 from src.config.attachments import ATTACHMENT_SETTINGS
+from src.config.runtime import get_run_id
 from src.tools.common import parse_tool_params
+
+# Per-agent read budget, same reasoning as SEARCH_BUDGET_PER_AGENT in
+# web_search.py: each agent holds its own tool instance, the counter resets
+# when the run_id changes. Without it, a model that hallucinates a
+# document_id (e.g. the hex hash in a user-supplied PDF URL) retries id
+# variants until the framework LLM-call cap kills the whole step.
+READ_BUDGET_PER_AGENT = 12
 
 
 @register_tool('AttachmentReadTool')
@@ -55,6 +63,13 @@ class AttachmentReadTool(BaseTool):
         'required': ['document_id'],
     }
 
+    def __init__(self, cfg=None):
+        super().__init__(cfg)
+        self._budget_run_id: str | None = None
+        self._read_count = 0
+        self._seen_calls: set = set()
+        self._missing_ids: set = set()
+
     def call(self, params: str, **kwargs) -> str:
         try:
             par = parse_tool_params(params)
@@ -71,10 +86,47 @@ class AttachmentReadTool(BaseTool):
         locator = str(par.get('locator') or '').strip() or None
         query = str(par.get('query') or '').strip() or None
 
+        # URL/path passed as document_id: a user-supplied link is a web
+        # resource, not an uploaded attachment. Redirect instead of failing
+        # blind; this is the most common hallucination pattern.
+        if '://' in document_id or '/' in document_id or document_id.lower().endswith('.pdf'):
+            return (f'error: "{document_id}" is a URL or file name, not a document_id. '
+                    'A document_id comes ONLY from an <uploaded_document> block created when the '
+                    'user uploads a file. If the user gave you a web/PDF link, fetch it with '
+                    'WebFetchTool instead. Do NOT retry AttachmentReadTool with ids derived from '
+                    'a URL.')
+
+        # Cheap guards first: they do not consume the read budget.
+        call_key = (document_id, locator, query)
+        if call_key in self._seen_calls:
+            return ('error: you already made this exact AttachmentReadTool call and the result '
+                    'is in the conversation above. Do NOT repeat it. If you have enough '
+                    'information, STOP all tool calls now and write your final answer as plain '
+                    'Markdown text (no tool call).')
+        self._seen_calls.add(call_key)
+
+        if document_id in self._missing_ids:
+            return (f'error: document_id "{document_id}" already failed once in this run. '
+                    'Do NOT retry it and do NOT guess variants of it. '
+                    + self._available_ids_hint())
+
+        run_id = get_run_id()
+        if run_id != self._budget_run_id:
+            self._budget_run_id = run_id
+            self._read_count = 0
+        if self._read_count >= READ_BUDGET_PER_AGENT:
+            return ('error: your attachment read budget is exhausted. STOP reading attachments: '
+                    'do NOT retry and do NOT guess other document_ids. Proceed with the content '
+                    'already retrieved. If you have enough information, STOP all tool calls now '
+                    'and write your final answer as plain Markdown text (no tool call).')
+        self._read_count += 1
+
         try:
             manifest, chunks = load_document(document_id, ATTACHMENT_SETTINGS)
-        except FileNotFoundError as exc:
-            return f'error: {exc}'
+        except FileNotFoundError:
+            self._missing_ids.add(document_id)
+            return (f'error: document not found: {document_id}. '
+                    + self._available_ids_hint())
 
         if locator:
             selected = _select_by_locator(chunks, locator)
@@ -90,6 +142,17 @@ class AttachmentReadTool(BaseTool):
 
         filename = manifest.get('filename', document_id)
         return _render(filename, selected, max_chars)
+
+    @staticmethod
+    def _available_ids_hint() -> str:
+        ids = session_document_ids()
+        if ids:
+            return ('The only document_ids uploaded in this session are: '
+                    + ', '.join(ids)
+                    + '. Do NOT guess any other id.')
+        return ('No attachment has been uploaded in this session (there is no '
+                '<uploaded_document> block at all). If the user supplied a URL, it is a web '
+                'resource: use WebFetchTool on it instead. Do NOT retry AttachmentReadTool.')
 
 
 def _select_by_locator(chunks: list, locator: str) -> list:
