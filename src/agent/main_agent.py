@@ -58,6 +58,7 @@ class MainAgent(FnCallAgent):
             'MarkDownReadTool',
             'YamlReadTool',
             'AttachmentReadTool',
+            'WebSearchTool',
             'WebFetchTool',
             'WriteResult',
         ]

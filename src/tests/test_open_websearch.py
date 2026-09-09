@@ -559,11 +559,10 @@ def test_main_agent_assigns_web_tools_to_main_retrieval_and_verification(monkeyp
     agent = MainAgent(llm=None)
 
     expected_web_tools = {"WebSearchTool", "WebFetchTool"}
-    # The main agent keeps WebFetchTool only: its final synthesis can fetch
-    # user-supplied URLs (provenance-gated and budgeted), but open-ended
-    # searching stays with the retrieval/verification sub-agents.
-    assert "WebFetchTool" in agent.assigned_tools
-    assert "WebSearchTool" not in agent.assigned_tools
+    # Ordinary conversation is still agentic: source-specific factual
+    # questions may need discovery and fetching even when they do not justify
+    # the heavyweight report workflow.
+    assert expected_web_tools.issubset(agent.assigned_tools)
     assert agent.mode_detector.assigned_tools == ["WriteResult"]
     assert agent.analysts_selector.assigned_tools == ["WriteResult"]
     assert expected_web_tools.issubset(agent.rag_agent.assigned_tools)
@@ -572,6 +571,15 @@ def test_main_agent_assigns_web_tools_to_main_retrieval_and_verification(monkeyp
     for analyst in agent.analysts.values():
         assert expected_web_tools.isdisjoint(analyst.assigned_tools)
     assert expected_web_tools.isdisjoint(agent.report_writer.assigned_tools)
+
+
+def test_main_prompt_allows_source_research_without_scope_expansion():
+    from src.prompts.prompts import MAIN_AGENT_SYS_PROMPT
+
+    assert "available tools autonomously in ordinary conversation" in MAIN_AGENT_SYS_PROMPT
+    assert "search for the official source" in MAIN_AGENT_SYS_PROMPT
+    assert "Do not add definitions of adjacent terms" in MAIN_AGENT_SYS_PROMPT
+    assert "Do not invoke the report structure" in MAIN_AGENT_SYS_PROMPT
 
 
 def test_user_message_urls_are_registered_as_fetch_provenance():
