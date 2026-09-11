@@ -6,7 +6,7 @@ required_sections:
     title: 问题分类
     title_en: Problem Classification
     priority: 1
-    description: Classification (pure funds-forex / pure funds-banking / pure tax / cross-domain), sub-domains and transaction type.
+    description: Classification (funds-forex / funds-banking / tax / commercial / cross-domain), including securities-regulation where applicable, plus sub-domains and transaction type.
 
   - id: conclusions
     title: 结论或考量维度

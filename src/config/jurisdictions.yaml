@@ -15,6 +15,7 @@ jurisdictions:
         - pbc.gov.cn
         - chinatax.gov.cn
         - court.gov.cn
+        - csrc.gov.cn
     case_law_databases:
       - name: 中国裁判文书网
         url: https://wenshu.court.gov.cn/

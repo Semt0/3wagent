@@ -7,11 +7,15 @@ default_provider: local
 providers:
   deepseek:
     model: deepseek-v4-flash
+    model_type: strict_oai
     model_server: https://api.deepseek.com
     api_key_env: DEEPSEEK_API_KEY
     generate_cfg:
       temperature: 0.15
       top_p: 0.85
+      # Send standard OpenAI-compatible `tools` to DeepSeek so its DSML is
+      # decoded by the provider into native tool_calls before reaching us.
+      use_raw_api: true
 
   kimi:
     model: kimi-k2.5

@@ -5,6 +5,13 @@ from src.tools.common import get_file_path_param, parse_tool_params, resolve_pro
 
 @register_tool('MarkDownReadTool')
 class MarkDownReadTool(BaseTool):
+    """Read text without retaining conversation state.
+
+    Tool instances live as long as their agent and can outlive a WebUI chat
+    session.  Reads must therefore remain idempotent instead of recording
+    paths on the instance and assuming their content is still in context.
+    """
+
     name = "MarkDownReadTool"
     description = ("Read a Markdown/text file and return its content. "
                    "Call format: <tool_call>\n"
@@ -22,12 +29,6 @@ class MarkDownReadTool(BaseTool):
         "required": ["file_path"]
     }
 
-    def __init__(self, cfg=None):
-        super().__init__(cfg)
-        # Paths already read by this agent instance; small models sometimes
-        # fall into degenerate re-read loops when they hesitate to conclude.
-        self._seen_paths: set = set()
-
     def call(self, params: str, **kwargs) -> str:
         try:
             par = parse_tool_params(params)
@@ -38,11 +39,6 @@ class MarkDownReadTool(BaseTool):
             rel = get_file_path_param(par)
         except KeyError:
             return 'error: missing required parameter "file_path" (relative to the src runtime root)'
-        if rel in self._seen_paths:
-            return ('error: you have already read this file; its full content is in the conversation '
-                    'above. Do NOT read it again. If you have enough information, STOP all tool calls '
-                    'now and write your final answer as plain Markdown text (no tool call).')
-        self._seen_paths.add(rel)
         try:
             path = resolve_project_path(rel)
         except (ValueError, OSError):

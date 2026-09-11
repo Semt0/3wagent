@@ -7,6 +7,7 @@ from src.agent.webui import (
     MAIN_AGENT_NAME,
     THEME_CSS_PATH,
     ThemedWebUI,
+    conversation_history_to_chatbot,
     group_responses_for_display,
 )
 
@@ -39,6 +40,31 @@ def test_group_empty_and_main_only():
     responses = [_msg('a'), _msg('b', MAIN_AGENT_NAME)]
     units = group_responses_for_display(responses)
     assert [u['content'] for u in units] == ['a', 'b']
+
+
+def test_conversation_history_to_chatbot_rebuilds_multiple_turns():
+    history = [
+        {'role': 'user', 'content': [{'text': '第一问'}, {'file': '/tmp/a.pdf'}]},
+        {'role': 'assistant', 'content': '第一答', 'name': MAIN_AGENT_NAME},
+        {'role': 'user', 'content': [{'text': '第二问'}]},
+        {'role': 'assistant', 'content': '检索中', 'name': 'rag_subagent'},
+        {'role': 'assistant', 'content': '第二答', 'name': MAIN_AGENT_NAME},
+    ]
+
+    rows = conversation_history_to_chatbot(history)
+
+    assert rows[0][0] == '第一问\n\n[file] a.pdf'
+    assert rows[0][1][0] == '第一答'
+    assert rows[1][0] == '第二问'
+    assert '<details>' in rows[1][1][0]
+    assert rows[2][0] is None
+    assert rows[2][1][0] == '第二答'
+
+
+def test_conversation_history_to_chatbot_handles_empty_and_pending_user():
+    assert conversation_history_to_chatbot([]) is None
+    rows = conversation_history_to_chatbot([{'role': 'user', 'content': '尚未回复'}])
+    assert rows == [['尚未回复', [None]]]
 
 
 def test_theme_overrides_vendor_details_nowrap_and_bounds_wide_content():

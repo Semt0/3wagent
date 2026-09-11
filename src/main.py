@@ -16,6 +16,11 @@ def parse_args():
     parser = argparse.ArgumentParser(description = "3wagent")
     parser.add_argument("-d", "--DEBUG", default=False, action="store_true", help="DEBUG Mode")
     parser.add_argument(
+        "--cli",
+        action="store_true",
+        help="start an interactive terminal session instead of the WebUI",
+    )
+    parser.add_argument(
         "-p", "--provider", help="LLM provider from the selected LLM config"
     )
     parser.add_argument("-m", "--model", default=None, help="override the provider's model name")
@@ -35,7 +40,13 @@ def main():
         logger.setLevel('DEBUG')
 
     with OpenWebSearchSupervisor():
-        run_3wagent(
+        runner = run_3wagent
+        if args.cli:
+            # Keep terminal-only use independent of Gradio imports.
+            from src.agent.cli import run_cli_3wagent
+
+            runner = run_cli_3wagent
+        runner(
             model_name=args.model,
             provider=args.provider,
             config_path=args.llm_config,

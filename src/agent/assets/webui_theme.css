@@ -475,6 +475,10 @@ body {
 
 .w3-empty { font-size: 13px; color: var(--w3-text-2); }
 
+.w3-new-conversation { width: 100%; margin-bottom: 8px; }
+.w3-conversation-selector { margin-bottom: 14px; }
+.w3-conversation-selector label span { font-size: 12px; }
+
 /* Rendered markdown inside result blocks */
 .w3-md { font-size: 13px; line-height: 1.65; color: var(--w3-text); overflow-wrap: break-word; }
 .w3-md h1, .w3-md h2, .w3-md h3, .w3-md h4 {

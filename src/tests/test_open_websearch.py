@@ -563,8 +563,8 @@ def test_main_agent_assigns_web_tools_to_main_retrieval_and_verification(monkeyp
     # questions may need discovery and fetching even when they do not justify
     # the heavyweight report workflow.
     assert expected_web_tools.issubset(agent.assigned_tools)
-    assert agent.mode_detector.assigned_tools == ["WriteResult"]
-    assert agent.analysts_selector.assigned_tools == ["WriteResult"]
+    assert agent.mode_detector.assigned_tools == []
+    assert agent.analysts_selector.assigned_tools == []
     assert expected_web_tools.issubset(agent.rag_agent.assigned_tools)
     assert expected_web_tools.issubset(agent.validate_agent.assigned_tools)
     assert expected_web_tools.issubset(agent.citation_verifier.assigned_tools)

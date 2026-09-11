@@ -13,7 +13,7 @@ Each source entry should include:
 - `authority`: Issuing authority or official database.
 - `url`: Canonical URL.
 - `domains`: One or more of `funds`, `tax`, `commercial`.
-- `subdomains` (optional): Finer-grained labels within a domain. For `funds`: `forex-administration` (SAFE, FX settlement, current/capital account), `aml-kyc` (anti-money laundering, customer due diligence), `sanctions` (OFAC, UN, sectoral sanctions), `payment-licensing`.
+- `subdomains` (optional): Finer-grained labels within a domain. For `funds`: `forex-administration` (SAFE, FX settlement, current/capital account), `aml-kyc` (anti-money laundering, customer due diligence), `sanctions` (OFAC, UN, sectoral sanctions), `payment-licensing`. For `commercial`: `securities-regulation` (securities supervision, overseas issuance/listing and filing rules).
 - `reliability`: `S`, `A`, `B`, `C`, or `D`.
 - `source_type`: Law, regulation, regulator guidance, tax authority guidance, official FAQ, professional commentary, or public commentary.
 - `notes`: Retrieval guidance and limits.

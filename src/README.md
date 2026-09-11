@@ -122,6 +122,10 @@ WebUI 地址。浏览器中的 Agent 会自动获得 `WebSearchTool` 和
 `WebFetchTool`；专业政策问题进入检索、法规有效性验证或引用核验阶段时，
 Agent 会按需调用这些工具，简单对话通常不会触发搜索。
 
+WebUI 会把每个对话的完整上下文自动保存到
+`workspace/conversations/<conversation-id>.json`。左侧“历史对话”可以恢复此前
+对话并继续追问；点击“新对话”会清空当前页面上下文，但不会删除已保存记录。
+
 LLM 请求通过 SSH 隧道发送到远程服务器；搜索引擎访问和官方网页抓取则
 从本地机器发起，因此本地网络必须能够访问所选搜索引擎及目标网站。
 OpenWebSearch 启动日志位于：

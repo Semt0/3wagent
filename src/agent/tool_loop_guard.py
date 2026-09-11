@@ -58,12 +58,11 @@ def tool_free_finalize_messages(
     A terminal tool result interrupts ``FnCallAgent`` after it has emitted the
     assistant's function call but before it can append the matching function
     response. Sending that unresolved tail to an OpenAI-compatible endpoint
-    can produce HTTP 400 because it becomes an empty assistant message. Pure
-    reasoning stream fragments have the same problem on stricter servers.
+    can produce HTTP 400 because it becomes an empty assistant message.
 
-    Drop only the unresolved assistant tail and empty reasoning-only assistant
-    messages. Completed tool-call/response pairs and their evidence remain in
-    the history.
+    Drop only the unresolved assistant tail. Preserve reasoning attached to
+    completed tool-call/response pairs: thinking-mode APIs require that exact
+    ``reasoning_content`` to be passed back with the tool call.
     """
     history = copy.deepcopy(messages + response)
 
@@ -83,6 +82,7 @@ def tool_free_finalize_messages(
             message.role == ASSISTANT
             and not _message_has_text(message)
             and not message.function_call
+            and not message.reasoning_content
         )
     ]
     history.append(Message(USER, prompt))

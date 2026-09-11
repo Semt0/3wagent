@@ -1,5 +1,5 @@
 jurisdiction: CN
-updated: 2026-06-01
+updated: 2026-09-11
 sources:
   - id: cn-national-laws-regulations-database
     title: National Laws and Regulations Database
@@ -18,6 +18,66 @@ sources:
     reliability: S
     source_type: official legal database
     notes: Official State Council administrative regulations database. Use for regulations issued by the State Council.
+
+  - id: cn-csrc-overseas-listing-trial-measures
+    title: 《境内企业境外发行证券和上市管理试行办法》发布页
+    authority: 中国证券监督管理委员会
+    url: https://www.csrc.gov.cn/csrc/c101954/c7124478/content.shtml
+    domains: [commercial]
+    subdomains: [securities-regulation]
+    reliability: S
+    source_type: departmental rule publication page
+    notes: Official CSRC announcement for 证监会公告〔2023〕43号. The page separately links Attachment 1 (the binding trial-measures text) and Attachment 2 (the explanatory note). Use Attachment 1 for filing subjects and statutory filing deadlines; use Attachment 2 only for background, rationale and explanatory context.
+
+  - id: cn-csrc-overseas-listing-trial-measures-text
+    title: 《境内企业境外发行证券和上市管理试行办法》正文（附件1）
+    authority: 中国证券监督管理委员会
+    url: https://www.csrc.gov.cn/csrc/c101954/c7124478/7124478/files/%E9%99%84%E4%BB%B61%EF%BC%9A%E5%A2%83%E5%86%85%E4%BC%81%E4%B8%9A%E5%A2%83%E5%A4%96%E5%8F%91%E8%A1%8C%E8%AF%81%E5%88%B8%E5%92%8C%E4%B8%8A%E5%B8%82%E7%AE%A1%E7%90%86%E8%AF%95%E8%A1%8C%E5%8A%9E%E6%B3%95.pdf
+    domains: [commercial]
+    subdomains: [securities-regulation]
+    reliability: S
+    source_type: departmental rule text
+    notes: Binding text attached to 证监会公告〔2023〕43号. Use its operative provisions as the primary authority for filing subjects, filing triggers and statutory deadlines.
+
+  - id: cn-csrc-overseas-listing-trial-measures-explanation
+    title: 关于《境内企业境外发行证券和上市管理试行办法》的说明（附件2）
+    authority: 中国证券监督管理委员会
+    url: https://www.csrc.gov.cn/csrc/c101954/c7124478/7124478/files/%E9%99%84%E4%BB%B62%EF%BC%9A%E5%85%B3%E4%BA%8E%E3%80%8A%E5%A2%83%E5%86%85%E4%BC%81%E4%B8%9A%E5%A2%83%E5%A4%96%E5%8F%91%E8%A1%8C%E8%AF%81%E5%88%B8%E5%92%8C%E4%B8%8A%E5%B8%82%E7%AE%A1%E7%90%86%E8%AF%95%E8%A1%8C%E5%8A%9E%E6%B3%95%E3%80%8B%E7%9A%84%E8%AF%B4%E6%98%8E.pdf
+    domains: [commercial]
+    subdomains: [securities-regulation]
+    reliability: A
+    source_type: official explanatory material
+    notes: Official explanatory attachment published with the rule. Use for legislative background, policy rationale and the regulator's explanation, but do not substitute it for operative provisions in Attachment 1.
+
+  - id: cn-csrc-overseas-listing-rules-release
+    title: 境外上市备案管理制度规则发布实施
+    authority: 中国证券监督管理委员会
+    url: https://www.csrc.gov.cn/csrc/c100028/c7124479/content.shtml
+    domains: [commercial]
+    subdomains: [securities-regulation]
+    reliability: A
+    source_type: regulator press release
+    notes: Official release overview for the trial measures and five supporting guidelines. Use for the release date, implementation overview and the regulator's summary; do not treat the summary as a substitute for the rule text.
+
+  - id: cn-csrc-overseas-listing-filing-arrangements
+    title: 关于境内企业境外发行上市备案管理安排的通知
+    authority: 中国证券监督管理委员会
+    url: https://www.csrc.gov.cn/csrc/c100028/c7124507/content.shtml
+    domains: [commercial]
+    subdomains: [securities-regulation]
+    reliability: A
+    source_type: regulator implementation notice
+    notes: Official transitional and implementation arrangements, including when filing communications and applications began, treatment of pending applications, existing issuers and the filing-system entry point. Keep these transitional arrangements distinct from the generally applicable deadlines in the trial measures.
+
+  - id: cn-csrc-overseas-listing-filing-system
+    title: 境内企业境外发行上市备案管理信息系统
+    authority: 中国证券监督管理委员会
+    url: https://neris.csrc.gov.cn/
+    domains: [commercial]
+    subdomains: [securities-regulation]
+    reliability: A
+    source_type: regulator filing service
+    notes: Official filing and communication service hosted on the neris.csrc.gov.cn subdomain. Use as the operational entry point after deriving the filing subject and timing from the governing rule and applicable guidance.
 
   - id: cn-foreign-exchange-regulations
     title: Regulations of the People's Republic of China on Foreign Exchange Administration

@@ -1,8 +1,8 @@
 """Themed WebUI for 3wagent.
 
-Subclass of qwen_agent.gui.WebUI that overrides only presentation:
-a dark "Deep Watch" Gradio theme plus a custom CSS layer, without
-modifying the installed qwen-agent package.
+Subclass of qwen_agent.gui.WebUI that adds durable conversation handling
+and a dark "Deep Watch" Gradio theme without modifying the installed
+qwen-agent package.
 
 The `run()` layout below mirrors qwen_agent.gui.web_ui.WebUI.run
 (qwen-agent, Apache-2.0); `agent_run()` below mirrors WebUI.agent_run
@@ -13,8 +13,9 @@ re-sync BOTH methods with the vendor version.
 import os
 import pprint
 import re
+from datetime import datetime
 from html import escape
-from typing import List
+from pathlib import Path
 
 from markdown_it import MarkdownIt
 from qwen_agent.agents.user_agent import PENDING_USER_INPUT
@@ -23,6 +24,8 @@ from qwen_agent.gui.utils import convert_fncall_to_text
 from qwen_agent.llm.schema import CONTENT, NAME, ROLE, Message
 from qwen_agent.log import logger
 
+from src.agent.conversations import ConversationStore
+
 MAIN_AGENT_NAME = '3wagent'
 
 # gfm-like enables tables; html is explicitly disabled because the result
@@ -30,7 +33,7 @@ MAIN_AGENT_NAME = '3wagent'
 _MD = MarkdownIt('gfm-like', {'html': False})
 
 
-def group_responses_for_display(display_responses: List[dict]) -> List[dict]:
+def group_responses_for_display(display_responses: list[dict]) -> list[dict]:
     """Fold consecutive same-sub-agent messages into one collapsible unit.
 
     Messages with no name (or the main agent's name) stay as individual
@@ -38,7 +41,7 @@ def group_responses_for_display(display_responses: List[dict]) -> List[dict]:
     name (qwen-agent tags them automatically via Agent.run) becomes one
     bubble whose content is a collapsed <details> block.
     """
-    units: List[dict] = []
+    units: list[dict] = []
     for msg in display_responses:
         name = msg.get(NAME)
         if not name or name == MAIN_AGENT_NAME:
@@ -64,6 +67,62 @@ def group_responses_for_display(display_responses: List[dict]) -> List[dict]:
         unit.pop('_parts')
         result.append(unit)
     return result
+
+
+def _user_content_for_display(content) -> str:
+    """Turn persisted multimodal user content into a readable chat bubble."""
+    if not isinstance(content, list):
+        return str(content or '')
+    parts = []
+    for item in content:
+        if not isinstance(item, dict):
+            parts.append(str(item))
+        elif item.get('text'):
+            parts.append(str(item['text']))
+        else:
+            for kind in ('file', 'image', 'audio', 'video'):
+                if item.get(kind):
+                    value = item[kind]
+                    if isinstance(value, str):
+                        value = value.removeprefix('file://')
+                        value = Path(value).name
+                    parts.append(f'[{kind}] {value}')
+                    break
+    return '\n\n'.join(parts)
+
+
+def conversation_history_to_chatbot(messages: list[dict], agent_count: int = 1):
+    """Rebuild mgr.Chatbot's row format from persisted raw agent history."""
+    if not messages:
+        return None
+
+    rows = []
+    pending_user = None
+    pending_responses = []
+
+    def flush():
+        nonlocal pending_user, pending_responses
+        display_responses = group_responses_for_display(
+            convert_fncall_to_text(pending_responses)
+        ) if pending_responses else []
+        if not display_responses and pending_user is not None:
+            rows.append([pending_user, [None for _ in range(agent_count)]])
+        for index, response in enumerate(display_responses):
+            slots = [None for _ in range(agent_count)]
+            slots[0] = response[CONTENT]
+            rows.append([pending_user if index == 0 else None, slots])
+        pending_user = None
+        pending_responses = []
+
+    for message in messages:
+        role = message.get(ROLE)
+        if role == 'user':
+            flush()
+            pending_user = _user_content_for_display(message.get(CONTENT))
+        elif role in ('assistant', 'function'):
+            pending_responses.append(message)
+    flush()
+    return rows or None
 
 THEME_CSS_PATH = os.path.join(os.path.dirname(__file__), 'assets', 'webui_theme.css')
 LOGO_PATH = os.path.join(os.path.dirname(__file__), 'assets', 'logo.png')
@@ -92,6 +151,68 @@ def _load_theme_css() -> str:
 
 class ThemedWebUI(WebUI):
     """qwen_agent WebUI with the 3wagent dark theme applied."""
+
+    def __init__(self, *args, conversation_store: ConversationStore | None = None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.conversation_store = conversation_store or ConversationStore()
+
+    def _conversation_choices(self):
+        choices = []
+        for item in self.conversation_store.list():
+            try:
+                updated = datetime.fromisoformat(item['updated_at']).astimezone().strftime('%m-%d %H:%M')
+            except ValueError:
+                updated = item['updated_at'].replace('T', ' ')[:16]
+            choices.append((f"{item['title']}  ·  {updated}", item['id']))
+        return choices
+
+    def add_text_and_save(self, _input, _audio_input, _chatbot, _history, conversation_id):
+        """Append the user input and immediately persist it."""
+        from qwen_agent.gui.gradio_dep import gr
+
+        for input_update, audio_update, chatbot, history in super().add_text(
+            _input, _audio_input, _chatbot, _history
+        ):
+            if conversation_id:
+                self.conversation_store.save(conversation_id, history)
+            else:
+                conversation_id = self.conversation_store.create(history)
+            yield (
+                input_update,
+                audio_update,
+                chatbot,
+                history,
+                conversation_id,
+                gr.update(choices=self._conversation_choices(), value=conversation_id),
+            )
+
+    def agent_run_and_save(self, _chatbot, _history, conversation_id, _agent_selector=None):
+        """Persist streaming agent history so completed turns survive restarts."""
+        args = (_chatbot, _history)
+        if _agent_selector is not None:
+            args += (_agent_selector,)
+        for result in self.agent_run(*args):
+            if conversation_id:
+                self.conversation_store.save(conversation_id, result[1])
+            yield result
+
+    def new_conversation(self):
+        """Clear only this browser session; the previous conversation stays stored."""
+        from qwen_agent.gui.gradio_dep import gr
+
+        return None, [], None, gr.update(choices=self._conversation_choices(), value=None)
+
+    def restore_conversation(self, conversation_id):
+        """Load a selected conversation into both display and agent context."""
+        if not conversation_id:
+            return None, [], None
+        try:
+            history = self.conversation_store.load(conversation_id)['messages']
+        except (FileNotFoundError, ValueError):
+            logger.warning('Unable to restore conversation %r', conversation_id)
+            return None, [], None
+        chatbot = conversation_history_to_chatbot(history, len(self.agent_list))
+        return chatbot, history, conversation_id
 
     def agent_run(self, _chatbot, _history, _agent_selector=None):
         # Copied from qwen_agent.gui.web_ui.WebUI.agent_run (qwen-agent,
@@ -212,10 +333,10 @@ class ThemedWebUI(WebUI):
         return status_html, results_html
 
     def run(self,
-            messages: List[Message] = None,
+            messages: list[Message] | None = None,
             share: bool = False,
-            server_name: str = None,
-            server_port: int = None,
+            server_name: str | None = None,
+            server_port: int | None = None,
             concurrency_limit: int = 10,
             enable_mention: bool = False,
             **kwargs):
@@ -352,11 +473,27 @@ class ThemedWebUI(WebUI):
                 theme=custom_theme,
                 title='3wagent',
         ) as demo:
-            history = gr.State([])
+            history = gr.State(messages or [])
+            conversation_id = gr.State(None)
             with ms.Application():
                 gr.HTML(header_html)
                 with gr.Row(elem_classes='container'):
                     with gr.Column(scale=1, elem_classes='w3-sidebar'):
+                        gr.HTML("<div class='w3-sidebar-title'>对话</div>")
+                        new_conversation_button = gr.Button(
+                            '＋ 新对话',
+                            variant='primary',
+                            size='sm',
+                            elem_classes='w3-new-conversation',
+                        )
+                        conversation_selector = gr.Dropdown(
+                            choices=self._conversation_choices(),
+                            value=None,
+                            label='历史对话',
+                            info='选择后恢复完整上下文',
+                            interactive=True,
+                            elem_classes='w3-conversation-selector',
+                        )
                         gr.HTML("<div class='w3-sidebar-title'>运行状态</div>")
                         gr.HTML("<div id='w3-status-root'></div>")
                         gr.HTML("<div class='w3-sidebar-title' style='margin-top:14px'>子代理结果</div>")
@@ -442,9 +579,16 @@ class ThemedWebUI(WebUI):
                         )
 
                     input_promise = input.submit(
-                        fn=self.add_text,
-                        inputs=[input, audio_input, chatbot, history],
-                        outputs=[input, audio_input, chatbot, history],
+                        fn=self.add_text_and_save,
+                        inputs=[input, audio_input, chatbot, history, conversation_id],
+                        outputs=[
+                            input,
+                            audio_input,
+                            chatbot,
+                            history,
+                            conversation_id,
+                            conversation_selector,
+                        ],
                         queue=False,
                     )
 
@@ -454,18 +598,36 @@ class ThemedWebUI(WebUI):
                             [chatbot, agent_selector],
                             [chatbot, agent_selector],
                         ).then(
-                            self.agent_run,
-                            [chatbot, history, agent_selector],
+                            self.agent_run_and_save,
+                            [chatbot, history, conversation_id, agent_selector],
                             [chatbot, history, agent_selector],
                         )
                     else:
                         input_promise = input_promise.then(
-                            self.agent_run,
-                            [chatbot, history],
+                            self.agent_run_and_save,
+                            [chatbot, history, conversation_id],
                             [chatbot, history],
                         )
 
                     input_promise.then(self.flushed, None, [input])
+
+                    new_conversation_button.click(
+                        fn=self.new_conversation,
+                        inputs=None,
+                        outputs=[chatbot, history, conversation_id, conversation_selector],
+                        queue=False,
+                        cancels=[input_promise],
+                    )
+                    # ``input`` fires for a user's selection only. ``change``
+                    # would also fire when add_text refreshes the choices and
+                    # could race with the running agent callback.
+                    conversation_selector.input(
+                        fn=self.restore_conversation,
+                        inputs=[conversation_selector],
+                        outputs=[chatbot, history, conversation_id],
+                        queue=False,
+                        cancels=[input_promise],
+                    )
 
             timer = gr.Timer(1.0)
             timer.tick(fn=self._render_side_panels, outputs=[status_val, results_val])

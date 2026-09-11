@@ -35,12 +35,30 @@ def test_salvage_returns_none_without_markers():
     assert _salvage_params(123) is None
 
 
-def test_read_tools_reject_duplicate_reads():
+def test_markdown_read_tool_is_idempotent():
     from src.tools.read_markdown_files import MarkDownReadTool
 
     tool = MarkDownReadTool()
     first = tool.call({"file_path": "config/routing.yaml"})
     assert "error" not in first[:20]
     second = tool.call({"file_path": "config/routing.yaml"})
-    assert second.startswith("error: you have already read this file")
-    assert "STOP all tool calls" in second
+    assert second == first
+
+
+def test_yaml_read_tool_is_idempotent():
+    from src.tools.read_yaml_files import YamlReadTool
+
+    tool = YamlReadTool()
+    first = tool.call({"file_path": "config/routing.yaml"})
+    assert "error" not in first[:20]
+    second = tool.call({"file_path": "config/routing.yaml"})
+    assert second == first
+
+
+def test_failed_read_does_not_poison_later_reads():
+    from src.tools.read_yaml_files import YamlReadTool
+
+    tool = YamlReadTool()
+    missing = tool.call({"file_path": "config/does-not-exist.yaml"})
+    assert missing == "error: file not found: config/does-not-exist.yaml"
+    assert tool.call({"file_path": "config/does-not-exist.yaml"}) == missing

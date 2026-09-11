@@ -8,8 +8,10 @@ from typing import Literal
 from qwen_agent.agents import FnCallAgent
 from qwen_agent.llm import BaseChatModel
 from qwen_agent.llm.schema import ASSISTANT, USER, Message
+from qwen_agent.log import logger
 
 from src.agent.attachments import inline_uploaded_files, supported_formats_hint
+from src.agent.results import AgentResultError
 from src.agent.subagent import *
 from src.agent.tool_loop_guard import (
     TerminalToolResult,
@@ -17,6 +19,7 @@ from src.agent.tool_loop_guard import (
     terminal_finalize_prompt,
     tool_free_finalize_messages,
 )
+from src.agent.tool_call_compat import ToolCallCompatibilityMixin
 from src.config.llm import load_llm_config
 from src.config.logger import attach_run_log
 from src.config.runtime import get_run_dir, get_subagents_dir, new_run_id
@@ -44,7 +47,7 @@ class AgentMode(Enum):
     WORKING = 'working'
 
 
-class MainAgent(FnCallAgent):
+class MainAgent(ToolCallCompatibilityMixin, FnCallAgent):
     """Customize the main agent to resolve policy problem
 
     Two modes (AgentMode): NORMAL for casual Q&A, WORKING for the policy
@@ -63,10 +66,10 @@ class MainAgent(FnCallAgent):
             'WebFetchTool',
             'WriteResult',
         ]
-        functional_tools = ['WriteResult']
         # Workflow sub-agents report via their final reply (the framework
         # persists it to the result file), so they no longer need WriteResult.
-        # The main agent and functional sub-agents keep it.
+        # Functional sub-agents likewise return JSON directly; WriteResult is
+        # only an optional compatibility path in the shared result resolver.
         subagent_tools = ['MarkDownReadTool', 'YamlReadTool', 'AttachmentReadTool']
         retrieval_tools = subagent_tools + ['WebSearchTool', 'WebFetchTool']
         verification_tools = subagent_tools + ['WebSearchTool', 'WebFetchTool']
@@ -91,9 +94,9 @@ class MainAgent(FnCallAgent):
             'commercial': CommercialLawAnalystSubAgent(function_list=subagent_tools, llm=llm),
         }
         # Functional subagent for policy-question detection (clean context)
-        self.mode_detector = ModeDetector(llm=llm, function_list=functional_tools)
+        self.mode_detector = ModeDetector(llm=llm, function_list=[])
         # Functional subagent for analyst selection from the routing result
-        self.analysts_selector = AnalystsSelector(llm=llm, function_list=functional_tools)
+        self.analysts_selector = AnalystsSelector(llm=llm, function_list=[])
         self.mode = AgentMode.NORMAL
         # Current workflow step label for the WebUI status panel; None in NORMAL mode.
         self.current_step: str | None = None
@@ -180,13 +183,20 @@ class MainAgent(FnCallAgent):
         if not question.strip():
             return False
         result_path = get_run_dir() / 'mode_detection.json'
-        result = self.mode_detector.run_task(input_text = question , output_path = result_path)
+        try:
+            result = self.mode_detector.run_task(
+                input_text=question,
+                output_path=result_path,
+            )
+        except AgentResultError as exc:
+            logger.warning("Mode detection returned no usable result; using NORMAL mode: %s", exc)
+            return False
 
-        # type check
-        assert "is_policy_question" in result
-        assert isinstance(result["is_policy_question"], bool)
-
-        return result["is_policy_question"]
+        is_policy_question = result.get("is_policy_question")
+        if not isinstance(is_policy_question, bool):
+            logger.warning("Mode detection returned an invalid schema; using NORMAL mode: %r", result)
+            return False
+        return is_policy_question
 
     def _run_workflow(
         self,
@@ -213,8 +223,8 @@ class MainAgent(FnCallAgent):
         # add to previous response
         response.extend(rsp)
 
-        # add the result into MainAgent messages
-        new_messages.append(Message(ASSISTANT,self.routing_agent.get_back_prompt()))
+        # Orchestrator-supplied context is input, not a prior model response.
+        new_messages.append(Message(USER, self.routing_agent.get_back_prompt()))
 
 
         ### Step 3: RAG SubAgent
@@ -227,7 +237,7 @@ class MainAgent(FnCallAgent):
         response.extend(rsp)
 
         # add the result into MainAgent messages
-        new_messages.append(Message(ASSISTANT,self.rag_agent.get_back_prompt()))
+        new_messages.append(Message(USER, self.rag_agent.get_back_prompt()))
 
         ### Step 4: Validate SubAgent
         # subagent run
@@ -239,7 +249,7 @@ class MainAgent(FnCallAgent):
         response.extend(rsp)
 
         # add the result into MainAgent messages
-        new_messages.append(Message(ASSISTANT,self.validate_agent.get_back_prompt()))
+        new_messages.append(Message(USER, self.validate_agent.get_back_prompt()))
 
         ### Step 5: Domain Analysts selected by the routing result
         self.current_step = 'Step 5: 选择领域分析师'
@@ -248,21 +258,21 @@ class MainAgent(FnCallAgent):
             for rsp in analyst.run(new_messages):
                 yield response + rsp
             response.extend(rsp)
-            new_messages.append(Message(ASSISTANT, analyst.get_back_prompt()))
+            new_messages.append(Message(USER, analyst.get_back_prompt()))
 
         ### Step 6: Citation-Verifier SubAgent
         self.current_step = self.citation_verifier.STEP_CONTENT
         for rsp in self.citation_verifier.run(new_messages):
             yield response + rsp
         response.extend(rsp)
-        new_messages.append(Message(ASSISTANT, self.citation_verifier.get_back_prompt()))
+        new_messages.append(Message(USER, self.citation_verifier.get_back_prompt()))
 
         ### Step 7: Report Writing SubAgent
         self.current_step = self.report_writer.STEP_CONTENT
         for rsp in self.report_writer.run(new_messages):
             yield response + rsp
         response.extend(rsp)
-        new_messages.append(Message(ASSISTANT, self.report_writer.get_back_prompt()))
+        new_messages.append(Message(USER, self.report_writer.get_back_prompt()))
 
         # Final main loop: keep the accumulated subagent transcript in every frame
         self.current_step = '主代理综合'

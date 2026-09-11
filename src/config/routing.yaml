@@ -18,7 +18,7 @@ classifications:
 
   - id: commercial
     label: 民商法规
-    keywords: [公司设立, 董事, 股东, 股权转让, 合同, 商业登记, 牌照, 投资准入]
+    keywords: [公司设立, 董事, 股东, 股权转让, 合同, 商业登记, 牌照, 投资准入, 证券监管, 境外发行, 境外上市, 上市备案, 中国证监会, CSRC]
     agent: commercial-law-analyst
 
 cross_domain_rules:
@@ -40,3 +40,7 @@ subdomains:
     - id: payment-licensing
       label: 支付牌照
       keywords: [支付牌照, 支付服务]
+  commercial:
+    - id: securities-regulation
+      label: 证券监管／境外发行上市备案
+      keywords: [证券监管, 境外发行, 境外上市, 上市备案, 间接境外发行上市, 存量企业, 中国证监会, CSRC]

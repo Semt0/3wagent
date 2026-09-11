@@ -7,6 +7,9 @@ from typing import Any, Dict, Optional, Union
 
 import yaml
 
+# Register the strict OpenAI-compatible transport before Qwen-Agent resolves
+# provider configs by model_type.
+from src.llm.strict_oai import StrictOpenAICompatibleModel  # noqa: F401
 
 DEFAULT_CONFIG_PATH = Path(__file__).with_name("llm.yaml")
 

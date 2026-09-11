@@ -3,9 +3,9 @@
 from pathlib import Path
 
 import pytest
-
+from qwen_agent.llm import get_chat_model
 from src.config.llm import available_providers, load_llm_config
-
+from src.llm.strict_oai import StrictOpenAICompatibleModel
 
 CONFIG_PATH = Path(__file__).parents[1] / "config" / "llm.yaml"
 
@@ -33,8 +33,11 @@ def test_provider_model_can_be_overridden(monkeypatch):
         provider="deepseek", model_name="custom-model", config_path=CONFIG_PATH
     )
     assert config["model"] == "custom-model"
+    assert config["model_type"] == "strict_oai"
     assert config["api_key"] == "test-key"
     assert "api_key_env" not in config
+    assert config["generate_cfg"]["use_raw_api"] is True
+    assert isinstance(get_chat_model(config), StrictOpenAICompatibleModel)
 
 
 def test_external_provider_requires_api_key(monkeypatch):

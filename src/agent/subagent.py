@@ -1,29 +1,33 @@
-"""Sub-agents of 3wagent.
+"""Sub-agents of 3wagent with runtime-managed result capture.
 
-All sub-agents share one mechanism (BaseSubAgent): receive messages, work with
-tools, write a result file, then report back to the main agent. Concrete
-sub-agents only declare identity and prompts as class attributes.
+Research sub-agents return Markdown; functional sub-agents return structured
+JSON. The runtime validates and persists both forms without requiring a model
+to perform a file-writing tool call.
 """
 
 import copy
 from datetime import date
 from typing import Dict, Iterator, List, Optional, Union
 
-import json5
 from qwen_agent.agents import FnCallAgent
 from qwen_agent.llm import BaseChatModel
 from qwen_agent.llm.schema import ASSISTANT, USER, Message
 from qwen_agent.tools import BaseTool
 
+from src.agent.results import (
+    extract_last_assistant_text,
+    resolve_structured_result,
+    write_text_result,
+)
 from src.agent.tool_loop_guard import (
     TerminalToolResult,
     raise_for_terminal_tool_result,
     terminal_finalize_prompt,
     tool_free_finalize_messages,
 )
+from src.agent.tool_call_compat import ToolCallCompatibilityMixin
 from src.config.runtime import get_run_dir_relative, get_subagents_dir
 from src.prompts.prompts import *
-from src.tools.common import PROJECT_ROOT
 
 # Import tools so their @register_tool side effects run (string refs in function_list)
 from src.tools.read_attachment import AttachmentReadTool  # noqa: F401
@@ -34,7 +38,7 @@ from src.tools.web_search import WebSearchTool  # noqa: F401
 from src.tools.write_result import WriteResult  # noqa: F401
 
 
-class BaseSubAgent(FnCallAgent):
+class BaseSubAgent(ToolCallCompatibilityMixin, FnCallAgent):
     """Declarative sub-agent: override class attributes only."""
 
     SUBAGENT_NAME: str = ''
@@ -137,8 +141,7 @@ class BaseSubAgent(FnCallAgent):
         if not self._last_output_text.strip():
             return
         result_path = get_subagents_dir() / f'{self.SUBAGENT_NAME}_result.md'
-        result_path.parent.mkdir(parents=True, exist_ok=True)
-        result_path.write_text(self._last_output_text, encoding='utf-8')
+        write_text_result(result_path, self._last_output_text)
 
     @staticmethod
     def _was_truncated(rsp: List[Message]) -> bool:
@@ -191,17 +194,7 @@ class BaseSubAgent(FnCallAgent):
 
     @staticmethod
     def _extract_last_text(rsp: List[Message]) -> str:
-        for msg in reversed(rsp or []):
-            if msg['role'] != ASSISTANT:
-                continue
-            content = msg.get('content')
-            if isinstance(content, str) and content.strip():
-                return content
-            if isinstance(content, list):
-                text = ''.join(item.get('text') or '' for item in content)
-                if text.strip():
-                    return text
-        return ''
+        return extract_last_assistant_text(rsp)
 
 
 class RoutingSubAgent(BaseSubAgent):
@@ -276,7 +269,7 @@ class ReportWritingSubAgent(BaseSubAgent):
     USER_PROMPT = REPORT_WRITING_SUBAGENT_USER_PROMPT
 
 
-class FunctionalSubAgent(FnCallAgent):
+class FunctionalSubAgent(ToolCallCompatibilityMixin, FnCallAgent):
     """Generic single-shot functional base subagent.
 
     Accuracy comes from context cleanliness. Each
@@ -301,37 +294,26 @@ class FunctionalSubAgent(FnCallAgent):
         )
 
     def run_task(self, input_text, output_path):
-        """Run once with a clean context; the model writes the formatted output.
-
-        """
-        output_path.parent.mkdir(parents=True, exist_ok=True)
+        """Run once, validate direct structured output, and persist it."""
 
         user_prompt = FUNCTIONAL_TASK_USER_PROMPT_TEMPLATE.format(
-            input_text = input_text,
-            output_spec = self.OUTPUT_SPEC,
-            # Model-facing paths stay relative to the project root, matching
-            # the path convention of all other tools.
-            output_path = output_path.relative_to(PROJECT_ROOT)
+            input_text=input_text,
+            output_spec=self.OUTPUT_SPEC,
         )
 
-        # User message run
-        for _ in self.run([Message(USER, user_prompt)]):
+        rsp: List[Message] = []
+        for rsp in self.run([Message(USER, user_prompt)]):
             pass
-        result = json5.loads(output_path.read_text(encoding = "utf-8"))
-        
-        # Check the result type
-        assert(isinstance(result, self.RESULT_TYPE))
-
-        return result
+        return resolve_structured_result(rsp, output_path, self.RESULT_TYPE)
 
 class ModeDetector(FunctionalSubAgent):
     """ Mode Detector:
     """
     OUTPUT_SPEC = MODE_DETECTION_OUTPUT_SPEC
-    RESULT_TYPE = Dict
+    RESULT_TYPE = dict
 
 class AnalystsSelector(FunctionalSubAgent):
     """ Analysts Selector: pick domain analysts from the routing result.
     """
     OUTPUT_SPEC = ANALYST_SELECTION_OUTPUT_SPEC
-    RESULT_TYPE = Dict
+    RESULT_TYPE = dict

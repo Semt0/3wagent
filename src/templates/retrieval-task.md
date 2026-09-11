@@ -5,8 +5,8 @@ Use this template when the Lead Policy Agent delegates retrieval to `rag-retriev
 ## Issue Profile
 
 - User question:
-- **Classification:** (pure funds-forex / pure funds-banking / pure tax / cross-domain)
-- **Sub-domains:** (e.g., funds-forex, funds-AML, tax-withholding)
+- **Classification:** (funds-forex / funds-banking / tax / commercial / cross-domain)
+- **Sub-domains:** (e.g., funds-forex, funds-AML, tax-withholding, securities-regulation)
 - Extracted facts:
 - Transaction type:
 - Payment or asset character:
