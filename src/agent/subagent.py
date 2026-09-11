@@ -19,6 +19,7 @@ from src.agent.tool_loop_guard import (
     TerminalToolResult,
     raise_for_terminal_tool_result,
     terminal_finalize_prompt,
+    tool_free_finalize_messages,
 )
 from src.config.runtime import get_run_dir_relative, get_subagents_dir
 from src.prompts.prompts import *
@@ -89,9 +90,11 @@ class BaseSubAgent(FnCallAgent):
             terminal_result = exc
 
         if terminal_result is not None:
-            finalize_messages = new_messages + rsp + [
-                Message(USER, terminal_finalize_prompt(terminal_result))
-            ]
+            finalize_messages = tool_free_finalize_messages(
+                new_messages,
+                rsp,
+                terminal_finalize_prompt(terminal_result),
+            )
             fin: List[Message] = []
             for fin in self._call_llm(messages=finalize_messages, functions=[]):
                 yield rsp + fin
@@ -106,7 +109,11 @@ class BaseSubAgent(FnCallAgent):
             # The framework LLM-call cap cut the tool loop mid-work. Force one
             # tool-free finalization round so the sub-agent still concludes in
             # writing instead of vanishing without a result.
-            finalize_messages = new_messages + rsp + [Message(USER, FINALIZE_USER_PROMPT)]
+            finalize_messages = tool_free_finalize_messages(
+                new_messages,
+                rsp,
+                FINALIZE_USER_PROMPT,
+            )
             fin: List[Message] = []
             for fin in self._call_llm(messages=finalize_messages, functions=[]):
                 yield fin

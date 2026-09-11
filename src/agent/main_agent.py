@@ -15,6 +15,7 @@ from src.agent.tool_loop_guard import (
     TerminalToolResult,
     raise_for_terminal_tool_result,
     terminal_finalize_prompt,
+    tool_free_finalize_messages,
 )
 from src.config.llm import load_llm_config
 from src.config.logger import attach_run_log
@@ -159,7 +160,11 @@ class MainAgent(FnCallAgent):
             for rsp in super()._run(messages=messages, lang=lang, **kwargs):
                 yield rsp
         except TerminalToolResult as exc:
-            final_messages = messages + rsp + [Message(USER, terminal_finalize_prompt(exc))]
+            final_messages = tool_free_finalize_messages(
+                messages,
+                rsp,
+                terminal_finalize_prompt(exc),
+            )
             for fin in self._call_llm(messages=final_messages, functions=[]):
                 yield rsp + fin
 
@@ -269,7 +274,11 @@ class MainAgent(FnCallAgent):
             # Same recovery as BaseSubAgent: the framework LLM-call cap cut the
             # tool loop mid-work, so force one tool-free finalization round to
             # still deliver a written answer instead of vanishing.
-            finalize_messages = new_messages + final_rsp + [Message(USER, FINALIZE_USER_PROMPT)]
+            finalize_messages = tool_free_finalize_messages(
+                new_messages,
+                final_rsp,
+                FINALIZE_USER_PROMPT,
+            )
             for fin in self._call_llm(messages=finalize_messages, functions=[]):
                 yield response + final_rsp + fin
 

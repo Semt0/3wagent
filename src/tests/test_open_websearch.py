@@ -892,14 +892,26 @@ def test_terminal_fetch_result_stops_the_agent_tool_loop():
 
 def test_main_agent_terminal_tool_result_forces_tool_free_finalization(monkeypatch):
     from qwen_agent.agents import FnCallAgent
-    from qwen_agent.llm.schema import ASSISTANT, USER, Message
+    from qwen_agent.llm.schema import ASSISTANT, USER, FunctionCall, Message
     from src.agent.main_agent import MainAgent
     from src.agent.tool_loop_guard import TerminalToolResult
 
-    repeated_call = Message(role=ASSISTANT, content="repeated fetch requested")
+    reasoning_only = Message(
+        role=ASSISTANT,
+        content="",
+        reasoning_content="I should retry with browser rendering.",
+    )
+    repeated_call = Message(
+        role=ASSISTANT,
+        content="",
+        function_call=FunctionCall(
+            name="WebFetchTool",
+            arguments='{"url": "https://example.com/policy"}',
+        ),
+    )
 
     def fake_fncall_run(self, messages, **kwargs):
-        yield [repeated_call]
+        yield [reasoning_only, repeated_call]
         raise TerminalToolResult(
             tool_name="WebFetchTool",
             result=json.dumps(
@@ -926,6 +938,14 @@ def test_main_agent_terminal_tool_result_forces_tool_free_finalization(monkeypat
     assert len(finalization_calls) == 1
     assert finalization_calls[0]["functions"] == []
     assert "already_fetched" in finalization_calls[0]["messages"][-1]["content"]
+    assert all(
+        message.content or message.role != ASSISTANT
+        for message in finalization_calls[0]["messages"]
+    )
+    assert all(
+        not message.function_call
+        for message in finalization_calls[0]["messages"]
+    )
     assert frames[-1][-1]["content"] == "final answer from existing evidence"
 
 
