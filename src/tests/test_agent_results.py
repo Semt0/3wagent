@@ -3,7 +3,7 @@
 import json
 
 import pytest
-from qwen_agent.llm.schema import ASSISTANT, FUNCTION, USER, Message
+from qwen_agent.llm.schema import ASSISTANT, FUNCTION, Message
 from src.agent.results import (
     AgentResultError,
     extract_last_assistant_text,
@@ -85,18 +85,3 @@ def test_functional_subagent_accepts_direct_provider_response(monkeypatch, tmp_p
 
     assert result["is_policy_question"] is False
     assert output_path.exists()
-
-
-def test_invalid_mode_detection_result_falls_back_to_normal_mode(monkeypatch, tmp_path):
-    from src.agent import main_agent as main_agent_module
-    from src.agent.main_agent import MainAgent
-
-    class InvalidDetector:
-        def run_task(self, input_text, output_path):
-            raise AgentResultError("provider returned prose")
-
-    monkeypatch.setattr(main_agent_module, "get_run_dir", lambda: tmp_path)
-    agent = object.__new__(MainAgent)
-    agent.mode_detector = InvalidDetector()
-
-    assert agent._is_policy_question(Message(USER, "hi")) is False

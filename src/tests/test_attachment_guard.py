@@ -98,7 +98,7 @@ def test_guards_do_not_consume_budget(tool):
     assert tool._read_count == 1
 
 
-# ----------------------------------------------- workflow-level fallbacks
+# ----------------------------------------------- sub-agent result fallbacks
 
 
 def test_back_prompt_truncates_long_results_and_points_to_file(monkeypatch, tmp_path):
@@ -117,37 +117,3 @@ def test_back_prompt_truncates_long_results_and_points_to_file(monkeypatch, tmp_
     out = agent.get_back_prompt()
     assert 'result truncated at 8000 chars' in out
     assert 'workspace/test-run/sub_agents/routing_subagent_result.md' in out
-
-
-def _bare_main_agent(monkeypatch, tmp_path):
-    from src.agent import main_agent as main_mod
-
-    monkeypatch.setattr(main_mod, 'get_subagents_dir', lambda: tmp_path)
-    monkeypatch.setattr(main_mod, 'get_run_dir', lambda: tmp_path)
-    agent = main_mod.MainAgent.__new__(main_mod.MainAgent)
-    agent.analysts = {'tax': 'TAX', 'funds': 'FUNDS', 'commercial': 'COM'}
-    return agent
-
-
-def test_select_analysts_skips_selector_when_routing_missing(monkeypatch, tmp_path):
-    agent = _bare_main_agent(monkeypatch, tmp_path)
-
-    class ExplodingSelector:
-        def run_task(self, *args, **kwargs):
-            raise AssertionError('selector must not be called for an empty routing result')
-
-    agent.analysts_selector = ExplodingSelector()
-    assert agent._select_analysts() == ['TAX', 'FUNDS']
-
-
-def test_select_analysts_uses_selector_when_routing_present(monkeypatch, tmp_path):
-    agent = _bare_main_agent(monkeypatch, tmp_path)
-    (tmp_path / 'routing_subagent_result.md').write_text('资金合规-外汇管理', encoding='utf-8')
-
-    class FakeSelector:
-        def run_task(self, input_text, output_path):
-            assert '外汇管理' in input_text
-            return {'analysts': ['funds']}
-
-    agent.analysts_selector = FakeSelector()
-    assert agent._select_analysts() == ['FUNDS']

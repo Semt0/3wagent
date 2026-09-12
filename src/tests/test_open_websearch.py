@@ -554,7 +554,7 @@ def test_qwen_fetch_records_404_and_blocks_repeat(monkeypatch):
     assert tool._fetch_count == 1
 
 
-def test_main_agent_assigns_web_tools_to_main_retrieval_and_verification(monkeypatch):
+def test_main_agent_exposes_direct_tools_and_optional_specialists(monkeypatch):
     from qwen_agent.agents import FnCallAgent
     from src.agent.main_agent import MainAgent
 
@@ -565,27 +565,39 @@ def test_main_agent_assigns_web_tools_to_main_retrieval_and_verification(monkeyp
     agent = MainAgent(llm=None)
 
     expected_web_tools = {"WebSearchTool", "WebFetchTool"}
-    # Ordinary conversation is still agentic: source-specific factual
-    # questions may need discovery and fetching even when they do not justify
-    # the heavyweight report workflow.
+    # Normal mode remains agentic: the main model can retrieve directly and
+    # may choose one bounded specialist without entering a fixed workflow.
     assert expected_web_tools.issubset(agent.assigned_tools)
-    assert agent.mode_detector.assigned_tools == []
-    assert agent.analysts_selector.assigned_tools == []
-    assert expected_web_tools.issubset(agent.rag_agent.assigned_tools)
-    assert expected_web_tools.issubset(agent.validate_agent.assigned_tools)
-    assert expected_web_tools.issubset(agent.citation_verifier.assigned_tools)
-    for analyst in agent.analysts.values():
-        assert expected_web_tools.isdisjoint(analyst.assigned_tools)
-    assert expected_web_tools.isdisjoint(agent.report_writer.assigned_tools)
+    assert agent.delegate_tool in agent.assigned_tools
+    assert set(agent.delegate_tool.capabilities) == {
+        "source_research",
+        "validity_review",
+        "tax_analysis",
+        "funds_analysis",
+        "commercial_analysis",
+        "citation_review",
+    }
+    for name in ("source_research", "validity_review", "citation_review"):
+        assert expected_web_tools.issubset(
+            agent.specialists[name].assigned_tools
+        )
+    for name in ("tax_analysis", "funds_analysis", "commercial_analysis"):
+        assert expected_web_tools.isdisjoint(
+            agent.specialists[name].assigned_tools
+        )
+    assert not hasattr(agent, "mode_detector")
+    assert not hasattr(agent, "routing_agent")
 
 
 def test_main_prompt_allows_source_research_without_scope_expansion():
     from src.prompts.prompts import MAIN_AGENT_SYS_PROMPT
 
-    assert "available tools autonomously in ordinary conversation" in MAIN_AGENT_SYS_PROMPT
+    assert "available tools autonomously in normal mode" in MAIN_AGENT_SYS_PROMPT
     assert "search for the official source" in MAIN_AGENT_SYS_PROMPT
     assert "Do not add definitions of adjacent terms" in MAIN_AGENT_SYS_PROMPT
-    assert "Do not invoke the report structure" in MAIN_AGENT_SYS_PROMPT
+    assert "There is no mandatory research sequence" in MAIN_AGENT_SYS_PROMPT
+    assert "Stop researching once" in MAIN_AGENT_SYS_PROMPT
+    assert "deterministic calculation with complete inputs" in MAIN_AGENT_SYS_PROMPT
 
 
 def test_user_message_urls_are_registered_as_fetch_provenance():

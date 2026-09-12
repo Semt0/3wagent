@@ -212,7 +212,7 @@ LLM 配置位于 `src/config/llm.yaml`，由 `src/config/llm.py` 加载。provid
 | Agent 基类 | `FnCallAgent`（function-call 风格，非 Assistant/ReActChat） |
 | 前端 | qwen-agent 内置 `qwen_agent.gui.WebUI`（Gradio） |
 | 工具注册 | `@register_tool` + `BaseTool`，在 `main_agent.py` 中 import 触发注册，以字符串名传给 `function_list`（未使用 MCP） |
-| 系统提示词 | `MAIN_AGENT_SYS_PROMPT`，移植自旧 `.claude/CLAUDE.md` 的 Lead Policy Agent 规则（子代理树、8 步工作流、`reports/YYYYMMDD-topic/` 归档） |
+| 系统提示词 | `MAIN_AGENT_SYS_PROMPT`，定义 normal 模式下的自适应回答、证据边界与按需专家委派规则 |
 | 领域策略 | `src/config/*.yaml`（工具中的运行时相对路径为 `config/*.yaml`），由提示词引导模型用 `YamlReadTool` 自行读取 |
 
 主要工具：
@@ -221,6 +221,7 @@ LLM 配置位于 `src/config/llm.yaml`，由 `src/config/llm.py` 加载。provid
 - **YamlReadTool** — 读取 YAML 文件全文（入参 `file_path`）
 - **WebSearchTool** — 调用 open-websearch 搜索候选来源并标记官方域名
 - **WebFetchTool** — 抓取候选页面正文和来源元数据；网页内容始终视为不可信证据
+- **DelegatePolicyTask** — 仅在复杂问题确有必要时运行一个有界专家任务；不会启动固定流水线
 
 ## 与原架构的关键差异
 
@@ -230,16 +231,8 @@ LLM 配置位于 `src/config/llm.yaml`，由 `src/config/llm.py` 加载。provid
 
 **保留为自定义的**：领域提示词、`src/config/*.yaml` 策略文件、`src/sources/` 来源注册表、`src/templates/` 和文件读取工具。仓库根目录的旧目录可以在迁移完成后删除，不影响新运行时。
 
-## 当前流水线
+## 当前自适应执行方式
 
-`MainAgent._run()` 会将上传的 Markdown、纯文本和 YAML 文件内联到模型上下文；如果用户未输入提示词且没有附件成功解析，则直接返回格式提示，不进入 FnCallAgent 工具循环。专业问题依次经过：
+`MainAgent._run()` 会先解析附件，然后让同一个 normal 模式主 agent 根据问题本身选择最小能力集合：可以直接回答，可以调用附件、配置、搜索和抓取工具，也可以通过 `DelegatePolicyTask` 单独委派来源检索、有效性核验、税务、资金合规、商事或引用复核。代码不再预设 Routing → RAG → Validate → Analyst → Citation → Report 的执行顺序。
 
-1. 附件解析（parsing）
-2. Routing（策略路由）
-3. RAG 检索
-4. Validate（来源校验）
-5. 领域分析
-6. Citation-Verifier（引用核验）
-7. Report Writing（报告生成与归档）
-
-开放网络工具只分配给 RAG、时效校验和引用核验步骤；领域分析只消费前序证据包。后续重点是扩大端到端评测样本、完善检索快照归档，并根据真实失败情况决定是否启用 Playwright 浏览器兜底。
+每次工具选择写入当前 `workspace/<run-id>/capability_trace.jsonl`，用于调试实际采用的能力及原因。正式报告只在用户明确要求时使用输出契约；后续重点是扩大端到端评测样本、完善检索快照归档，并根据真实失败情况决定是否启用 Playwright 浏览器兜底。
