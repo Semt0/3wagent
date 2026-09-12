@@ -384,15 +384,21 @@ def test_qwen_search_tool_marks_and_prioritizes_official_results(monkeypatch):
                 engines=kwargs["engines"],
                 results=[
                     SearchResult("Commentary", "https://example.com/post", "", "bing", "web"),
-                    SearchResult("IRS", "https://www.irs.gov/payments", "", "bing", "web"),
+                    SearchResult(
+                        "Quarterly widget filing",
+                        "https://www.irs.gov/payments",
+                        "",
+                        "bing",
+                        "web",
+                    ),
                 ],
             )
 
     tool.client = FakeClient()
-    payload = json.loads(tool.call({"query": "withholding", "jurisdiction": "US"}))
+    payload = json.loads(tool.call({"query": "quarterly widget filing", "jurisdiction": "US"}))
 
     assert payload["status"] == "ok"
-    assert payload["results"][0]["title"] == "IRS"
+    assert payload["results"][0]["title"] == "Quarterly widget filing"
     assert payload["results"][0]["is_official"] is True
     assert "untrusted" in payload["untrusted_content_notice"].lower()
 
@@ -461,8 +467,8 @@ def test_search_result_can_be_fetched_by_another_tool_instance(monkeypatch):
                 engines=kwargs["engines"],
                 results=[
                     SearchResult(
-                        "SAFE regulation",
-                        "https://www.safe.gov.cn/safe/2020/0520/24015.html",
+                        "Quarterly widget regulation",
+                        "https://www.csrc.gov.cn/csrc/2020/0520/24015.html",
                         "",
                         "bing",
                         "web",
@@ -475,7 +481,7 @@ def test_search_result_can_be_fetched_by_another_tool_instance(monkeypatch):
             return FetchResponse(
                 url=url,
                 final_url=url,
-                title="SAFE regulation",
+                title="Quarterly widget regulation",
                 content_type="text/html",
                 retrieval_method="request",
                 truncated=False,
@@ -484,9 +490,9 @@ def test_search_result_can_be_fetched_by_another_tool_instance(monkeypatch):
 
     search_tool.client = FakeSearchClient()
     fetch_tool.client = FakeFetchClient()
-    search_tool.call({"query": "exact title", "jurisdiction": "CN"})
+    search_tool.call({"query": "Quarterly widget regulation", "jurisdiction": "CN"})
     payload = json.loads(
-        fetch_tool.call({"url": "https://www.safe.gov.cn/safe/2020/0520/24015.html"})
+        fetch_tool.call({"url": "https://www.csrc.gov.cn/csrc/2020/0520/24015.html"})
     )
 
     assert payload["status"] == "ok"

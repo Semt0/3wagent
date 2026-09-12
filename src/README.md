@@ -3,6 +3,8 @@
 `src/` 是 3wagent 的第二次架构转向：重新自建 runtime，但基于 [qwen-agent](https://github.com/QwenLM/qwen-agent) 而非 LangChain。`src/` 同时也是新框架的运行时根目录；运行所需的配置、来源注册表、模板与 Web Search 服务均位于其中，不依赖仓库根目录的旧架构。
 
 > 原架构说明见仓库根目录的 `docs/architecture.md`；本文档只描述 `src/` 重构。
+> 面向 42 道测试题的能力路线图及实时实现状态见
+> [`docs/agent-capability-roadmap.md`](docs/agent-capability-roadmap.md)。
 
 ## 当前状态
 
@@ -154,6 +156,12 @@ Web Search 使用独立的本地 `open-websearch` daemon。安装与启动方法
 | `WEBSEARCH_FALLBACK_TO_SEARXNG` | `false` | open-websearch 失败或无结果时回退旧 SearXNG |
 
 检索遵循：本地 `sources/` registry 优先，开放网络仅作补充；搜索摘要只能用于发现候选 URL，必须通过 `WebFetchTool` 获取官方页面正文后才能作为证据。法域对应的引擎与官方域名配置位于 `config/jurisdictions.yaml`。
+
+`WebSearchTool` 会按查询内容自动匹配来源注册表；精确命中时直接返回已登记来源，
+不消耗开放搜索请求。开放搜索结果会经过与主题无关的标题/摘要相关性评分，低相关
+页面不会暴露给 Agent。若普通搜索没有相关的官方结果，但能够从注册表或候选结果
+识别主管机关域名，工具会进行一次有界的官方域搜索。发生 302、验证码等引擎故障
+后，该引擎会在本次运行的后续查询中自动停用，并在结果元数据中报告。
 
 对于标记为 `CN` 且包含外汇、汇发、跨境贸易、资本项目或经常项目等关键词的
 查询，`WebSearchTool` 会先调用 SAFE 官网的固定站内检索入口；只要获得结果，

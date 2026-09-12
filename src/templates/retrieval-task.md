@@ -67,7 +67,7 @@ For each case found, record: case number/name, court, jurisdiction, key holdings
 1. Start from S and A sources in the registry.
 2. Fetch official laws, regulations, regulator guidance or tax authority pages.
 3. Search official sites only if the registry does not identify a precise source.
-4. **Search case-law databases** for analogous public judgments and retrievable answers.
+4. Search case-law databases only when the question asks about cases, enforcement, or judicial interpretation.
 5. Use C or D sources only as leads, not as final authority.
 6. Record gaps where no official support is found.
 
@@ -102,8 +102,8 @@ Return a source pack, not a final report.
 
 ### Required additional outputs
 
-1. **Involved currently-effective regulations list** — A numbered list of all currently effective laws, regulations and guidance that are relevant to the issue, with jurisdiction, domain and issuing authority. This is the priority output.
-2. **Amendment lineage leads** — For each currently effective regulation, note any visible amendment, replacement or repeal relationship with a prior regulation (single-tier only).
+1. **Relevant authorities** — List only the authorities needed to support the requested answer. Verify and label current status when the question makes validity time-sensitive; otherwise do not expand into a separate validity search.
+2. **Amendment lineage leads** — Note relationships visible in retrieved sources. Investigate lineage separately only when requested or necessary to avoid relying on superseded text.
 
 ## Prohibited Output
 
