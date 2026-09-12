@@ -122,8 +122,16 @@ def test_failed_engines_are_skipped_for_later_calls(monkeypatch):
             )
 
     tool.client = FakeClient()
-    first = json.loads(tool.call({"query": "测试规则甲", "jurisdiction": "CN"}))
-    second = json.loads(tool.call({"query": "测试规则乙", "jurisdiction": "CN"}))
+    first = json.loads(
+        tool.call(
+            {"query": "测试规则甲", "jurisdiction": "CN", "engines": ["bing", "baidu", "sogou"]}
+        )
+    )
+    second = json.loads(
+        tool.call(
+            {"query": "测试规则乙", "jurisdiction": "CN", "engines": ["bing", "baidu", "sogou"]}
+        )
+    )
 
     assert first["status"] == second["status"] == "ok"
     assert calls == [["bing", "baidu", "sogou"], ["bing"]]

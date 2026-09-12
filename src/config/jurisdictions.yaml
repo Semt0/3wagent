@@ -7,6 +7,9 @@ jurisdictions:
     label_en: Mainland China
     label_zh: 中国内地
     web_search:
+      # bing is the most reliable under agent traffic; baidu/sogou often fail
+      # (302 / anti-bot) but stay as backups — the runtime skips engines that
+      # already failed during the run.
       engines: [bing, baidu, sogou]
       official_domains:
         - npc.gov.cn

@@ -13,6 +13,16 @@ from src.llm.strict_oai import StrictOpenAICompatibleModel  # noqa: F401
 
 DEFAULT_CONFIG_PATH = Path(__file__).with_name("llm.yaml")
 
+# The provider config of the currently running agent, recorded at startup so
+# tool-layer helpers (e.g. the search-result judge) can build an LLM on the
+# same provider without threading the config through tool construction.
+_active_llm_config: Optional[Dict[str, Any]] = None
+
+
+def get_active_llm_config() -> Optional[Dict[str, Any]]:
+    """The config most recently produced by ``load_llm_config`` (or None)."""
+    return copy.deepcopy(_active_llm_config) if _active_llm_config else None
+
 
 def _read_config(config_path: Optional[Union[str, Path]] = None) -> Dict[str, Any]:
     path = Path(config_path) if config_path else DEFAULT_CONFIG_PATH
@@ -73,4 +83,6 @@ def load_llm_config(
         raise ValueError(
             f"Provider '{selected_provider}' must define both model and model_server"
         )
+    global _active_llm_config
+    _active_llm_config = copy.deepcopy(provider_config)
     return provider_config

@@ -59,6 +59,9 @@ class OpenWebSearchSupervisor:
         self._log_file = (log_dir / "open-websearch.log").open("a", encoding="utf-8")
         env = os.environ.copy()
         env.setdefault("DEFAULT_SEARCH_ENGINE", "bing")
+        # baidu/sogou are unreliable under agent traffic (302 / anti-bot) but
+        # remain available as backups; per-run engine failure tracking skips
+        # them once they fail.
         env.setdefault("ALLOWED_SEARCH_ENGINES", "bing,duckduckgo,startpage,baidu,sogou")
         env.setdefault("SEARCH_MODE", "request")
         port = parsed.port or (443 if parsed.scheme == "https" else 80)

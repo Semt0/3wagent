@@ -8,7 +8,7 @@ from typing import Literal
 
 from qwen_agent.agents import FnCallAgent
 from qwen_agent.llm import BaseChatModel
-from qwen_agent.llm.schema import Message
+from qwen_agent.llm.schema import USER, Message
 
 from src.agent.attachments import inline_uploaded_files, supported_formats_hint
 from src.agent.subagent import (
@@ -23,6 +23,7 @@ from src.agent.tool_call_compat import ToolCallCompatibilityMixin
 from src.agent.tool_loop_guard import (
     TerminalToolResult,
     raise_for_terminal_tool_result,
+    sanitize_response_tail,
     terminal_finalize_prompt,
     tool_free_finalize_messages,
 )
@@ -99,6 +100,17 @@ class MainAgent(ToolCallCompatibilityMixin, FnCallAgent):
         lang: Literal['en', 'zh'] = 'en',
         **kwargs,
     ) -> Iterator[list[Message]]:
+        # A retry after a failed run can append the same user input twice (the
+        # WebUI persists the input before the run finishes); collapse the
+        # duplicate so neither the model nor the saved history sees it.
+        if (
+            len(messages) >= 2
+            and messages[-1].role == USER
+            and messages[-2].role == USER
+            and _message_text(messages[-1]) == _message_text(messages[-2])
+        ):
+            del messages[-2]
+
         # Resolve attachments FIRST: an unreadable-only upload blocks the run
         # regardless of mode (and never reaches mode detection or the LLM).
         # Resolve the original message so the main model and any later tool
@@ -143,13 +155,16 @@ class MainAgent(ToolCallCompatibilityMixin, FnCallAgent):
             for rsp in super()._run(messages=messages, lang=lang, **kwargs):
                 yield rsp
         except TerminalToolResult as exc:
+            # The interrupted tail still holds tool calls without responses;
+            # strip it so frontends never persist an invalid history.
+            clean_rsp = sanitize_response_tail(rsp)
             final_messages = tool_free_finalize_messages(
                 messages,
                 rsp,
                 terminal_finalize_prompt(exc),
             )
             for fin in self._call_llm(messages=final_messages, functions=[]):
-                yield rsp + fin
+                yield clean_rsp + fin
 
     def _call_tool(self, tool_name, tool_args='{}', **kwargs):
         self.current_step = f'按需调用：{tool_name}'

@@ -44,7 +44,9 @@ class WebSearchTool(BaseTool):
     description = (
         "Search the public web through the local open-websearch service. Use only after checking "
         "the local sources registry. Pass the applicable jurisdiction when known so the tool can "
-        "select suitable engines and mark official domains. Search results are discovery leads; "
+        "select suitable engines and mark official domains. Returned results have passed an LLM "
+        "relevance review against your current task; results discarded by the review are listed "
+        "in discarded_by_judge with reasons. Search results are discovery leads; "
         "call WebFetchTool on relevant official URLs before relying on them."
     )
     parameters: ClassVar[dict[str, Any]] = {
@@ -188,13 +190,25 @@ class WebSearchTool(BaseTool):
             if is_safe_search_query(query, jurisdiction):
                 official_results = self.safe_client.search(query, limit=limit)
                 if official_results:
-                    ranked_official, discarded = _rank_results(
+                    candidates = _prepare_results(
                         official_results,
                         query,
                         policy.official_domains if policy else [],
                     )
+                    ranked_official, judged_out, judge_status = self._judge_results(
+                        candidates, query, kwargs.get("messages")
+                    )
+                    if judge_status != "applied":
+                        ranked_official, discarded = _rank_results(
+                            official_results,
+                            query,
+                            policy.official_domains if policy else [],
+                        )
+                    else:
+                        discarded = 0
                 else:
                     ranked_official, discarded = [], 0
+                    judged_out, judge_status = [], "skipped:no-candidates"
                 if ranked_official:
                     register_discovered_urls(
                         (item["url"] for item in ranked_official),
@@ -214,6 +228,8 @@ class WebSearchTool(BaseTool):
                             "qualified_results": len(ranked_official),
                             "official_results": len(ranked_official),
                             "discarded_low_relevance": discarded,
+                            "judge": judge_status,
+                            "discarded_by_judge": judged_out,
                             "quality": "strong",
                             "search_guidance": (
                                 "Relevant official discovery results are available; fetch them "
@@ -242,13 +258,20 @@ class WebSearchTool(BaseTool):
         partial_failures = list(response.partial_failures)
         self._record_engine_failures(partial_failures)
         raw_results = list(response.results)
-        ranked_results, discarded = _rank_results(raw_results, query, official_domains)
+        candidates = _prepare_results(raw_results, query, official_domains)
         search_attempts = [{"query": query, "engines": response.engines}]
 
-        # If broad search produced no relevant official result, use authority
-        # evidence from the returned hosts and registry to make one bounded,
-        # domain-constrained retry.  The model need not discover search syntax.
-        if not any(item["is_official"] for item in ranked_results) and "site:" not in query.lower():
+        # If broad search produced no relevant official-domain result, use
+        # authority evidence from the returned hosts and registry to make one
+        # bounded, domain-constrained retry.  "Relevant" keeps a minimal
+        # heuristic floor here: the judge only runs after the retry, and a
+        # low-quality official hit must not suppress it.
+        qualified_official = [
+            item
+            for item in candidates
+            if item["is_official"] and item["relevance_score"] >= MIN_RESULT_RELEVANCE
+        ]
+        if not qualified_official and "site:" not in query.lower():
             candidate_domains = _official_result_domains(raw_results, official_domains)
             for domain in infer_official_domains(query, jurisdiction):
                 if domain not in candidate_domains and is_official_url(
@@ -279,11 +302,23 @@ class WebSearchTool(BaseTool):
                     partial_failures.extend(retry.partial_failures)
                     self._record_engine_failures(retry.partial_failures)
                     raw_results.extend(retry.results)
-                    ranked_results, discarded = _rank_results(
-                        raw_results, query, official_domains
-                    )
+                    candidates = _prepare_results(raw_results, query, official_domains)
 
-        if not ranked_results and self.settings.fallback_to_searxng:
+        # Every candidate is reviewed by the LLM judge; the heuristic
+        # threshold filter only applies when the judge is unavailable.
+        ranked_results, judged_out, judge_status = self._judge_results(
+            candidates, query, kwargs.get("messages")
+        )
+        if judge_status != "applied":
+            ranked_results, discarded = _rank_results(raw_results, query, official_domains)
+            judged_out = []
+        else:
+            discarded = 0
+
+        # When the judge reviewed the survivors and discarded all of them, the
+        # verdicts (not a different engine) are the useful feedback — falling
+        # back to SearXNG would just re-fetch the same junk.
+        if not ranked_results and judge_status != "applied" and self.settings.fallback_to_searxng:
             empty_error = OpenWebSearchError(
                 "no_relevant_results", "open-websearch returned no relevant results"
             )
@@ -296,11 +331,19 @@ class WebSearchTool(BaseTool):
         )
         official_count = sum(bool(item["is_official"]) for item in ranked_results)
         quality = "strong" if official_count else ("usable" if ranked_results else "insufficient")
-        guidance = (
-            "Relevant official discovery results are available; fetch them before relying on them."
-            if official_count
-            else "No relevant official result was found. Do not treat discarded or generic pages as evidence."
-        )
+        if not ranked_results and judged_out:
+            guidance = (
+                "All search results were reviewed and discarded as irrelevant to the current "
+                "question; see discarded_by_judge for the reasons. Rephrase the query with "
+                "different angles (document number, issuing authority, exact title) at most once "
+                "or twice, then report the evidence gap."
+            )
+        else:
+            guidance = (
+                "Relevant official discovery results are available; fetch them before relying on them."
+                if official_count
+                else "No relevant official result was found. Do not treat discarded or generic pages as evidence."
+            )
         return json.dumps(
             {
                 "status": "ok",
@@ -316,6 +359,8 @@ class WebSearchTool(BaseTool):
                 "qualified_results": len(ranked_results),
                 "official_results": official_count,
                 "discarded_low_relevance": discarded,
+                "judge": judge_status,
+                "discarded_by_judge": judged_out,
                 "quality": quality,
                 "search_guidance": guidance,
                 "results": ranked_results,
@@ -326,6 +371,32 @@ class WebSearchTool(BaseTool):
             ensure_ascii=False,
             indent=2,
         )
+
+    def _judge_results(
+        self,
+        ranked: list[dict],
+        query: str,
+        messages: Any,
+    ) -> tuple[list[dict], list[dict], str]:
+        """LLM relevance judge over every candidate result.
+
+        No heuristic pre-filter runs before the judge — it sees all
+        deduplicated candidates. The judge is an enhancement, never a
+        dependency: any failure (no provider config, LLM error, unparseable
+        verdicts) leaves the candidates untouched and the caller falls back
+        to the heuristic threshold filter.
+        """
+        if not ranked:
+            return ranked, [], "skipped:no-candidates"
+        if not messages:
+            return ranked, [], "skipped:no-context"
+        try:
+            from src.agent.judge import judge_search_results
+
+            kept, discarded = judge_search_results(messages, query, ranked)
+        except Exception as exc:  # noqa: BLE001 - judge is best-effort
+            return ranked, [], f"fallback:{type(exc).__name__}"
+        return kept, discarded, "applied"
 
     def _record_engine_failures(self, failures: list[dict[str, Any]]) -> None:
         for failure in failures:
@@ -395,28 +466,38 @@ class WebSearchTool(BaseTool):
         )
 
 
-def _rank_results(results, query: str, official_domains: list[str]) -> tuple[list[dict], int]:
-    ranked: list[dict[str, Any]] = []
+def _prepare_results(results, query: str, official_domains: list[str]) -> list[dict]:
+    """Deduplicate, score and mark results WITHOUT discarding any.
+
+    The LLM judge reviews every candidate, so nothing is filtered out here;
+    the heuristic threshold is applied only as the no-judge fallback
+    (``_rank_results``).
+    """
+    prepared: list[dict[str, Any]] = []
     seen_urls: set[str] = set()
     for item in results:
         if item.url in seen_urls:
             continue
         seen_urls.add(item.url)
-        score = relevance_score(query, item.title, item.snippet)
-        if score < MIN_RESULT_RELEVANCE:
-            continue
-        ranked.append(
+        prepared.append(
             {
                 **item.to_dict(),
                 "is_official": is_official_url(item.url, official_domains),
-                "relevance_score": score,
+                "relevance_score": relevance_score(query, item.title, item.snippet),
             }
         )
-    ranked.sort(
+    prepared.sort(
         key=lambda item: (bool(item["is_official"]), float(item["relevance_score"])),
         reverse=True,
     )
-    return ranked, len(seen_urls) - len(ranked)
+    return prepared
+
+
+def _rank_results(results, query: str, official_domains: list[str]) -> tuple[list[dict], int]:
+    """Heuristic threshold filter; used only when the LLM judge is unavailable."""
+    prepared = _prepare_results(results, query, official_domains)
+    ranked = [item for item in prepared if item["relevance_score"] >= MIN_RESULT_RELEVANCE]
+    return ranked, len(prepared) - len(ranked)
 
 
 def _official_result_domains(results, official_domains: list[str]) -> list[str]:

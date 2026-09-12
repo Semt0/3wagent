@@ -46,12 +46,12 @@
 
 | 编号 | 能力 | 状态 | 最后更新 | 实现证据与缺口 |
 |---|---|---|---|---|
-| BASE-01 | 来源注册表优先、搜索相关性过滤、官方域自适应重试、失败引擎降级 | 🟡 部分实现 | 2026-09-12 | `src/websearch/relevance.py`、`src/websearch/registry.py`、`src/tools/web_search.py`、`src/tests/test_search_strategy.py`；已通过相关回归测试，但尚未纳入完整 eval 数据集 |
+| BASE-01 | 来源注册表优先、搜索相关性过滤、官方域自适应重试、失败引擎降级 | 🟡 部分实现 | 2026-09-12 | `src/websearch/relevance.py`、`src/websearch/registry.py`、`src/tools/web_search.py`、`src/agent/judge.py`（LLM 二审）、`src/tests/test_search_strategy.py`、`src/tests/test_search_judge.py`；已通过相关回归测试；baidu/sogou 因 agent 流量下持续失败（302/反爬）已禁用，CN 默认仅 bing；尚未纳入完整 eval 数据集，LLM 二审未经真实模型运行验证 |
 | BASE-02 | 官方 URL 来源追踪与抓取限制 | 🟡 部分实现 | 2026-09-11 | `src/websearch/provenance.py`、`src/tools/web_fetch.py`；可阻止猜测 URL，但长文档无法分段回读 |
 | BASE-03 | 附件解析与定位 | 🟡 部分实现 | 2026-09-11 | 支持 PDF、DOCX、Excel、CSV、文本；不支持 Pages，复杂远程文件没有统一缓存索引 |
 | BASE-04 | 对话持久化 | 🟡 部分实现 | 2026-09-11 | `src/agent/conversations.py` 保存消息；尚未保存结构化事实、结论、来源和计算状态 |
 | BASE-05 | 来源有效性与引用核验子代理 | 🟡 部分实现 | 2026-09-11 | 已有 Validate/Citation Verifier；主要处理 Markdown，尚无 claim-source 结构化契约 |
-| BASE-06 | CLI、WebUI 与多模型兼容 | ✅ 已完成 | 2026-09-11 | CLI、会话管理、DeepSeek/Qwen tool-call compatibility、strict OpenAI message conversion；现有自动化测试覆盖 |
+| BASE-06 | CLI、WebUI 与多模型兼容 | ✅ 已完成 | 2026-09-12 | CLI、会话管理、DeepSeek/Qwen tool-call compatibility、strict OpenAI message conversion、terminal 中断后历史清洗（`sanitize_response_tail`）；现有自动化测试覆盖 |
 
 ## 5. 待实现能力
 
@@ -80,7 +80,7 @@
 - E05 复用上轮研究，仅改变表达方式；
 - 复杂问题仍能主动使用检索、有效性核验和专业分析。
 
-实现证据：`src/agent/main_agent.py` 删除政策问题模式检测和固定流水线，所有输入统一进入 normal 模式主 agent；`src/tools/delegate_policy_task.py` 提供无前置顺序、单任务边界的可选专家委派；`src/prompts/prompts.py` 定义最小能力集合、停止条件、短问/计算/改写直答和复杂问题分解原则；`workspace/<run-id>/capability_trace.jsonl` 记录工具、专家能力和选择原因；`src/tests/test_adaptive_orchestration.py` 覆盖 normal 模式、单专家隔离、错误能力拒绝和调试轨迹，`src/tests/test_open_websearch.py` 覆盖主 agent 工具能力与自适应提示契约。上述证据证明编排机制已经落地，但尚未证明 A02、A04、A08、D08、E05 和复杂问题在真实模型运行中的行为均满足验收标准；完成 CAP-01 smoke eval 前维持“部分实现”。
+实现证据：`src/agent/main_agent.py` 删除政策问题模式检测和固定流水线，所有输入统一进入 normal 模式主 agent；`src/tools/delegate_policy_task.py` 提供无前置顺序、单任务边界的可选专家委派（工具描述直接列出合法 capability 名，避免模型猜测浪费轮次）；`src/prompts/prompts.py` 定义最小能力集合、停止条件、短问/计算/改写直答和复杂问题分解原则；`workspace/<run-id>/capability_trace.jsonl` 记录工具、专家能力和选择原因；`src/tests/test_adaptive_orchestration.py` 覆盖 normal 模式、单专家隔离、错误能力拒绝和调试轨迹，`src/tests/test_open_websearch.py` 覆盖主 agent 工具能力与自适应提示契约。2026-09-12 两轮 22 个真实模型 CLI 用例（覆盖 A–E 五类）显示委派决策方向全部正确，但尚未形成结构化 smoke eval；完成 CAP-01 smoke eval 前维持"部分实现"。
 
 ### CAP-02：回答约束、错误前提与最小澄清
 
@@ -330,6 +330,11 @@
 按时间倒序追加。每条记录应关联能力编号、代码或测试证据，并说明状态变化。
 
 ### 2026-09-12
+
+- `CAP-01`：`DelegatePolicyTask` 描述中直接列出合法 capability 名称。此前两轮真实模型运行中模型先猜测过时名称（如 `tax-policy-analyst`）再靠 `unknown_capability` 错误恢复（A01×7、B02×6、D03×5 次浪费轮次），D01 甚至因此委派失败。机制不变，降低误用率。
+- `BASE-01`：搜索审查改为**全量 LLM judge**——不再有初审阈值过滤，judge 审查全部去重后的候选（启发式评分仅作为 judge 不可用时的兜底）；官方域自适应重试的触发条件保留一个最低相关性底线，避免低质量官方命中抑制重试。第三轮实测发现"初审全灭时 judge 无候选可审"的盲区（D01），本次改动即针对该盲区。同时应实测中 bing 限流问题，baidu/sogou 恢复为备用引擎（运行内失败降级机制负责跳过）。全套 140 项测试通过，待第四轮 smoke 验证。
+- `BASE-01`：搜索结果过滤升级为两阶段——启发式评分（快车道/阈值过滤）之后，新增 LLM-as-a-judge 二审：judge 为 `FunctionalSubAgent` 子类（`src/agent/functional.py` 新拆出的基类 + `src/agent/judge.py`），输入为主 agent 当前完整上下文（经悬空 tool_calls 清洗）加候选结果，输出结构化 JSON 判定；工具内部直接过滤，主 agent 只看到二审通过的结果和 `discarded_by_judge` 反馈；judge 复用本次运行生效的模型配置（`config/llm.get_active_llm_config`），故障或不可用时回退到启发式结果；搜索预算规则不变。新增 `src/tests/test_search_judge.py` 与 `conftest.py`（隔离模块级配置泄漏），全套 140 项测试通过。尚未经真实模型运行验证，待下一轮 CLI smoke。
+- `BASE-06`：修复 terminal 工具结果中断后，带悬空 `tool_calls` 的 assistant 消息被 WebUI/CLI 持久化进会话历史、下一轮请求被 DeepSeek 严格校验拒绝（HTTP 400）的问题；根因是 `FnCallAgent` 每完成一个工具就追加响应，并行调用轮被打断时未完成的调用排在已完成响应**之前**而非尾部，新增 `drop_unresolved_tool_calls` 按调用组配对清洗，并通过 `sanitize_response_tail` 在主 agent 与子代理收尾路径统一使用；同时折叠 WebUI 重试产生的重复 user 消息。新增回归测试于 `src/tests/test_strict_oai.py`，修复后第二轮 15 个 CLI 用例零 400。
 
 - `CAP-01`：移除政策问题模式检测和固定七步流水线，所有请求统一由 normal 模式主 agent 自适应处理；新增 `DelegatePolicyTask` 作为可选、可重复但不自动串联的专家能力，并写入按次能力选择轨迹；新增编排回归测试。机制实现完成，但真实模型 smoke eval 尚未执行，状态由“未开始”更新为“部分实现”。
 - `BASE-01`：实现通用搜索相关性评分、来源注册表精确匹配、官方域自适应重试和运行内失败引擎降级；新增 `src/tests/test_search_strategy.py`。完整测试集 132 项通过。状态记为“部分实现”，原因是尚未纳入 42 题 eval，也未完成真实来源的端到端基准。

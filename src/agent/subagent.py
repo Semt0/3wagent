@@ -22,10 +22,12 @@ from src.agent.results import (
 from src.agent.tool_loop_guard import (
     TerminalToolResult,
     raise_for_terminal_tool_result,
+    sanitize_response_tail,
     terminal_finalize_prompt,
     tool_free_finalize_messages,
 )
 from src.agent.tool_call_compat import ToolCallCompatibilityMixin
+from src.agent.functional import FunctionalSubAgent
 from src.config.runtime import get_run_dir_relative, get_subagents_dir
 from src.prompts.prompts import *
 
@@ -99,9 +101,12 @@ class BaseSubAgent(ToolCallCompatibilityMixin, FnCallAgent):
                 rsp,
                 terminal_finalize_prompt(terminal_result),
             )
+            # Yield the sanitized tail so any consumer persisting frames never
+            # sees tool calls without responses.
+            clean_rsp = sanitize_response_tail(rsp)
             fin: List[Message] = []
             for fin in self._call_llm(messages=finalize_messages, functions=[]):
-                yield rsp + fin
+                yield clean_rsp + fin
             self._last_output_text = self._extract_last_text(fin)
             self._truncated = False
             self._save_result_file()
@@ -268,43 +273,6 @@ class ReportWritingSubAgent(BaseSubAgent):
     SYSTEM_PROMPT = REPORT_WRITING_SUBAGENT_SYSTEM_PROMPT
     USER_PROMPT = REPORT_WRITING_SUBAGENT_USER_PROMPT
 
-
-class FunctionalSubAgent(ToolCallCompatibilityMixin, FnCallAgent):
-    """Generic single-shot functional base subagent.
-
-    Accuracy comes from context cleanliness. Each
-    run_task call is one-shot.
-
-    Current usage example: policy-question detection, routing-result analyst selection.
-    """
-    OUTPUT_SPEC = ""
-    RESULT_TYPE = None
-
-    def __init__(
-        self,
-        function_list: Optional[List[Union[str, Dict, BaseTool]]] = None,
-        llm: Optional[Union[Dict, BaseChatModel]] = None,
-        **kwargs,
-    ):
-        super().__init__(
-            llm=llm,
-            system_message=FUNCTIONAL_SUBAGENT_SYSTEM_PROMPT,
-            function_list=function_list,
-             **kwargs
-        )
-
-    def run_task(self, input_text, output_path):
-        """Run once, validate direct structured output, and persist it."""
-
-        user_prompt = FUNCTIONAL_TASK_USER_PROMPT_TEMPLATE.format(
-            input_text=input_text,
-            output_spec=self.OUTPUT_SPEC,
-        )
-
-        rsp: List[Message] = []
-        for rsp in self.run([Message(USER, user_prompt)]):
-            pass
-        return resolve_structured_result(rsp, output_path, self.RESULT_TYPE)
 
 class ModeDetector(FunctionalSubAgent):
     """ Mode Detector:

@@ -35,8 +35,8 @@ class DelegatePolicyTask(BaseTool):
             "capability": {
                 "type": "string",
                 "description": (
-                    "Specialist capability name. Available names are returned if the "
-                    "requested name is unavailable."
+                    "One of the capability names listed in this tool's description. "
+                    "Available names are also returned if the requested name is unavailable."
                 ),
             },
             "task": {
@@ -63,6 +63,13 @@ class DelegatePolicyTask(BaseTool):
     def __init__(self, capabilities: Mapping[str, Any]):
         super().__init__()
         self.capabilities = dict(capabilities)
+        # List the valid capability names up front: without them the model
+        # guesses (often stale names), burns a round on the
+        # unknown_capability error, and may give up on delegating at all.
+        self.description = (
+            f"{self.description} Available capabilities: "
+            f"{', '.join(sorted(self.capabilities))}."
+        )
 
     def call(self, params: str | dict, **kwargs) -> str:
         try:
